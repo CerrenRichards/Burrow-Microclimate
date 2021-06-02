@@ -10,25 +10,35 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
-```{r}
 
+## Combine all the files
+
+- Combine all the separate burrow .csv files
+- Correct the data and times
+- Match the metadata
+
+```{r}
+# Read in metadata and corrected date and times for the data
 metadata <- read.csv("metadata.csv")
 datetime <- read.csv("dateandtimes.csv")
 
 
+# Read in all the files at once
 # Make a list of all the .csv files
 files <- list.files(pattern="*.csv")
+
 # First apply read.csv, then rbind
-myfiles <- do.call(rbind, lapply(files, function(x) read.csv(x, stringsAsFactors = FALSE)))
+temps <- do.call(rbind, lapply(files, function(x) read.csv(x, stringsAsFactors = FALSE)))
 
-
-temps <- myfiles
+# Remove the origional date and times because they are in different formats
 temps$Date <- NULL 
 temps$Time <- NULL
 
-temps2 <- cbind(temps, datetime)
+# Join the corrected date and times to the `temps` dataframe
+temps <- cbind(temps, datetime)
 
-temps2 <- left_join(temps2, metadata, by = "Name")
+# Join the metadata to the `temps` dataframe
+temps <- left_join(temps, metadata, by = "Name")
 
 ```
 
