@@ -42,3 +42,65 @@ temps <- left_join(temps, metadata, by = "Name")
 
 ```
 
+
+## Plot over the whole study 
+
+Create a plot showing the mean and standard deviation temperature variation through the season 
+```{r}
+
+## Filter the inside and outside data to separate dataframes
+inside <- filter(temps, Location  == "Inside")
+outside <- filter(temps, Location  == "Outside")
+
+
+## Summarise the mean temperature and standard deviation for inside the burrow
+inside_mean <- inside %>%
+  group_by(Date, Time) %>%
+  summarise(mean = mean(Temperature), sd = sd(Temperature))
+
+## Make plot in ggplot
+library(ggplot2)
+
+ggplot(inside_mean)+
+  geom_point(aes(x = Time, y = mean))
+  geom_line(aes(x =julian, y = diff, colour = ISO3))+
+  theme(legend.position = "none")
+
+
+```
+
+## Plot for mean temp
+
+```{r}
+
+# Summarise the mean temperature and standard deviation for inside and outside the burrows
+mean_temp <- temps %>%
+  group_by(Location, X) %>%
+  summarise(mean = mean(Temperature), sd = sd(Temperature))
+
+# Issue when matching up the metadata - need to go back and resolve
+# For now, just delete the issue
+mean_temp <- mean_temp[-c(49), ]
+
+
+# Plot
+ggplot(mean_temp, aes(x = X, y = mean, group = Location))+
+  geom_line()+
+  geom_pointrange(aes(ymin=mean-sd, ymax=mean+sd))+
+  geom_point(size = 3,shape = 21, aes(fill = Location))+
+  scale_fill_manual(values=c('black','white'))+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Time of Day (h)") + ylab("Temperature (°C)")+
+  scale_x_continuous(breaks=seq(0,23,2))+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(legend.position = c(0.15, 0.75))
+
+
+
+
+```
+
+
+
