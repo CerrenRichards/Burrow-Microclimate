@@ -169,17 +169,62 @@ ggplot(data = filter(temps, Location == "Inside"), aes(x = datetime, y = Tempera
   
 
 
+burrows2 <- inner_join(burrows, temps)
+burrows2 <- burrows2 %>% distinct(Burrow, .keep_all = TRUE) 
+
+
 # Plot mean and sd
-ggplot(burrows, aes(x = Burrow, y = burrowmean))+
+ggplot(burrows2, aes(x = Burrow, y = burrowmean))+
   geom_pointrange(aes(ymin=burrowmean-burrowsd, ymax=burrowmean+burrowsd))+
   geom_point(size = 3,shape = 21)+
   theme_bw(base_size = 15)+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   xlab("Burrow") + ylab("Mean Temperature (°C)")+
-  #scale_x_continuous(breaks=seq(0,23,2))+
   theme(axis.title.y = element_text(vjust = 3))+
   theme(axis.title.x = element_text(vjust = -1))
 
+# Plots with the variables
+ggplot(burrows2, aes(x = Burrow_Depth_cm, y = burrowmean))+
+  geom_point(size = 3,shape = 21)+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+   ylab("Mean Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))
+
+
+
+# Plot jitter
+ggplot(filter(temps, Location == "Inside"), aes(x = Burrow, y = Temperature))+
+  geom_jitter(shape=16, position=position_jitter(0.2), alpha = 0.2)+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Burrow") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))
+
+# Boxplot
+ggplot(filter(temps, Location == "Inside"), aes(x = Burrow, y = Temperature))+
+  geom_boxplot()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Burrow") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))
+
+
+# Violin
+ggplot(filter(temps2, Location == "Inside"), aes(x = Burrow, y = Temperature))+
+    geom_jitter(shape=16, position=position_jitter(0.3), alpha = 0.1)+
+  geom_violin(draw_quantiles = c(0.5), alpha = 0.9)+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Burrow") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))
+
+
+temps2<- arrange(temps, burrowmean)
 
 ```
 
