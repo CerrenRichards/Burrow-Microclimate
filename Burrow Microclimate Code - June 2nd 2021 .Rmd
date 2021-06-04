@@ -46,30 +46,13 @@ temps <- left_join(temps, metadata, by = "Name")
 ## Plot over the whole study 
 
 Create a plot showing the mean and standard deviation temperature variation through the season 
+
+A good resource for timeseries plotting on the xaxis:
+https://www.r-graph-gallery.com/279-plotting-time-series-with-ggplot2.html
+
 ```{r}
 
-## Filter the inside and outside data to separate dataframes
-inside <- filter(temps, Location  == "Inside")
-outside <- filter(temps, Location  == "Outside")
-
-
-## Summarise the mean temperature and standard deviation for inside the burrow
-inside_mean <- inside %>%
-  group_by(Date, Time) %>%
-  summarise(mean = mean(Temperature), sd = sd(Temperature))
-
-## Make plot in ggplot
-library(ggplot2)
-
-ggplot(inside_mean)+
-  geom_point(aes(x = Time, y = mean))
-  geom_line(aes(x =julian, y = diff, colour = ISO3))+
-  theme(legend.position = "none")
-  
-  
-  
-#__________
-  
+# Join the date and time columns and specify the format
 temps$datetime <- as.POSIXct(paste(temps$Date, temps$Time), format="%d-%m-%Y %H:%M:%S")
 
 
@@ -80,20 +63,44 @@ season_mean_temp <- temps %>%
             n = n(), se = sd/sqrt(n))
 
 
-# Plot inside
-ggplot(data = filter(season_mean_temp, Location == "Outside"), aes(x = datetime, y = mean))+
+# Plot Inside temperature trend
+ggplot(data = filter(season_mean_temp, Location == "Inside"), aes(x = datetime, y = mean))+
   geom_line()+
-  geom_pointrange(aes(ymin=mean-sd, ymax=mean+sd))+
-  geom_point(shape = 21, alpha = 0.2, size = 1)+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd), alpha = 0.25)+
   theme_bw(base_size = 15)+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   xlab("Date") + ylab("Temperature (°C)")+
   theme(axis.title.y = element_text(vjust = 3))+
-  theme(axis.title.x = element_text(vjust = -1)) +
-  theme(legend.position = c(0.15, 0.75))
+  theme(axis.title.x = element_text(vjust = -1))+
+  scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b %Y")
+
+
+# Plot Outside temperature 
+ggplot(data = filter(season_mean_temp, Location == "Outside"), aes(x = datetime, y = mean))+
+  geom_line()+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd), alpha = 0.25)+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b %Y")
 
 
 
+# Facet wrap version of temperature trend
+ggplot(data = season_mean_temp, aes(x = datetime, y = mean))+
+  geom_line()+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd), alpha = 0.25)+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b")+
+  facet_wrap(~Location, scales = "free_y", ncol = 1, nrow = 2)+
+  theme(strip.text.x = element_text(size = 15, color = "white"), 
+          strip.background = element_rect(fill="black"))
 
 ```
 
@@ -121,8 +128,6 @@ ggplot(mean_temp, aes(x = Hour, y = mean, group = Location))+
   theme(axis.title.y = element_text(vjust = 3))+
   theme(axis.title.x = element_text(vjust = -1)) +
   theme(legend.position = c(0.15, 0.75))
-
-
 
 
 ```
