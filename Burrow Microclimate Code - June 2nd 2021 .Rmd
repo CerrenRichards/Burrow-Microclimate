@@ -40,6 +40,9 @@ temps <- cbind(temps, datetime)
 # Join the metadata to the `temps` dataframe
 temps <- left_join(temps, metadata, by = "Name")
 
+# Join the date and time columns and specify the format
+temps$datetime <- as.POSIXct(paste(temps$Date, temps$Time), format="%d-%m-%Y %H:%M:%S")
+
 ```
 
 
@@ -51,10 +54,6 @@ A good resource for timeseries plotting on the xaxis:
 https://www.r-graph-gallery.com/279-plotting-time-series-with-ggplot2.html
 
 ```{r}
-
-# Join the date and time columns and specify the format
-temps$datetime <- as.POSIXct(paste(temps$Date, temps$Time), format="%d-%m-%Y %H:%M:%S")
-
 
 # Summarise the mean temperature and standard deviation for inside and outside the burrows
 season_mean_temp <- temps %>%
@@ -73,6 +72,7 @@ ggplot(data = filter(season_mean_temp, Location == "Inside"), aes(x = datetime, 
   theme(axis.title.y = element_text(vjust = 3))+
   theme(axis.title.x = element_text(vjust = -1))+
   scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b %Y")
+
 
 
 # Plot Outside temperature 
@@ -128,6 +128,57 @@ ggplot(mean_temp, aes(x = Hour, y = mean, group = Location))+
   theme(axis.title.y = element_text(vjust = 3))+
   theme(axis.title.x = element_text(vjust = -1)) +
   theme(legend.position = c(0.15, 0.75))
+
+
+```
+
+## Plot the temperature variation between burrows
+
+```{r}
+
+# Plot - colours (not good)
+ggplot(data = filter(temps, Location == "Inside"), aes(x = datetime, y = Temperature))+
+  geom_line(aes(colour = Burrow))+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b %Y")
+
+
+# Calculate the mean temperature and standard deviation for each burrow
+burrows <- filter(temps, Location == "Inside") %>%
+  group_by(Burrow) %>%
+  summarise(burrowmean = mean(Temperature), burrowsd = sd(Temperature))
+
+# Join to the main dataframe
+temps <- left_join(temps, burrows)
+
+# Plot timeseries with mean
+ggplot(data = filter(temps, Location == "Inside"), aes(x = datetime, y = Temperature))+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b %Y")+
+  geom_hline(aes(yintercept = burrowmean), colour = "red", size = 1)+
+  facet_wrap(~Burrow, nrow = 1)
+  
+
+
+# Plot mean and sd
+ggplot(burrows, aes(x = Burrow, y = burrowmean))+
+  geom_pointrange(aes(ymin=burrowmean-burrowsd, ymax=burrowmean+burrowsd))+
+  geom_point(size = 3,shape = 21)+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Burrow") + ylab("Mean Temperature (°C)")+
+  #scale_x_continuous(breaks=seq(0,23,2))+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))
 
 
 ```
