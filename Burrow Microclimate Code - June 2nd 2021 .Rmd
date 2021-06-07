@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
+### PUFFINS
+Have to move the puffin .csv files into the working directory 
 
 ## Combine all the files
 
@@ -174,7 +176,7 @@ burrows2 <- burrows2 %>% distinct(Burrow, .keep_all = TRUE)
 
 
 # Plot mean and sd
-ggplot(burrows2, aes(x = Burrow, y = burrowmean))+
+ggplot(burrows2, aes(x = reorder(Burrow, -burrowmean), y = burrowmean))+
   geom_pointrange(aes(ymin=burrowmean-burrowsd, ymax=burrowmean+burrowsd))+
   geom_point(size = 3,shape = 21)+
   theme_bw(base_size = 15)+
@@ -204,7 +206,7 @@ ggplot(filter(temps, Location == "Inside"), aes(x = Burrow, y = Temperature))+
   theme(axis.title.x = element_text(vjust = -1))
 
 # Boxplot
-ggplot(filter(temps, Location == "Inside"), aes(x = Burrow, y = Temperature))+
+ggplot(filter(temps, Location == "Inside"), aes(x = reorder(Burrow, -Temperature), y = Temperature))+
   geom_boxplot()+
   theme_bw(base_size = 15)+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
@@ -214,7 +216,7 @@ ggplot(filter(temps, Location == "Inside"), aes(x = Burrow, y = Temperature))+
 
 
 # Violin
-ggplot(filter(temps2, Location == "Inside"), aes(x = Burrow, y = Temperature))+
+ggplot(filter(temps, Location == "Inside"), aes(x = reorder(Burrow, -Temperature), y = Temperature))+
     geom_jitter(shape=16, position=position_jitter(0.3), alpha = 0.1)+
   geom_violin(draw_quantiles = c(0.5), alpha = 0.9)+
   theme_bw(base_size = 15)+
@@ -224,9 +226,150 @@ ggplot(filter(temps2, Location == "Inside"), aes(x = Burrow, y = Temperature))+
   theme(axis.title.x = element_text(vjust = -1))
 
 
-temps2<- arrange(temps, burrowmean)
+```
+
+
+### PETRELS
+Have to move the petrel files into the working directory
+
+```{r}
+
+datetime_petrel <- read.csv("datetime_petrel.csv")
+
+
+# Read in all the files at once
+# Make a list of all the .csv files
+files <- list.files(pattern="*.csv")
+
+# First apply read.csv, then rbind
+temps_petrel <- do.call(rbind, lapply(files, function(x) read.csv(x, stringsAsFactors = FALSE)))
+
+# Remove the origional date and times because they are in different formats
+temps_petrel$Day <- NULL 
+temps_petrel$Month <- NULL
+temps_petrel$Year <- NULL
+temps_petrel$Time <- NULL
+
+# Join the corrected date and times to the `temps` dataframe
+temps_petrel <- cbind(temps_petrel, datetime_petrel)
+
+# Join the metadata to the `temps` dataframe
+temps_petrel <- left_join(temps_petrel, metadata, by = "Name")
+
+# Join the date and time columns and specify the format
+temps_petrel$datetime <- as.POSIXct(paste(temps_petrel$Date, temps_petrel$Time), format="%d-%m-%Y %H:%M:%S")
 
 ```
 
+
+
+# Plots over the whole study and between plots
+
+ISSUES WITH NAs - Something hasn't matched up - need to check
+
+```{r}
+
+# Summarise the mean temperature and standard deviation for inside and outside the burrows
+petrel_season_mean_temp <- temps_petrel %>%
+  group_by(Location, Habitat, datetime) %>%
+  summarise(mean = mean(Temperature), sd = sd(Temperature),
+            n = n(), se = sd/sqrt(n))
+
+
+# Plot Inside temperature trend
+ggplot(data = filter(petrel_season_mean_temp, Location == "Inside"), 
+       aes(x = datetime, y = mean, group = Habitat))+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd, fill = Habitat), alpha = 0.25)+
+  geom_line(aes(colour = Habitat))+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b %Y")
+
+# Inside facet
+ggplot(data = filter(petrel_season_mean_temp, Location == "Inside"), 
+       aes(x = datetime, y = mean))+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd), alpha = 0.25)+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b %Y")+
+  facet_wrap(~Habitat, ncol = 1)
+
+
+
+# Plot Outside temperature 
+ggplot(data = filter(petrel_season_mean_temp, Location == "Outside"), 
+       aes(x = datetime, y = mean, group = Habitat))+
+  geom_line(aes(colour = Habitat))+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd), alpha = 0.25)+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b %Y")
+
+# Outside Facet 
+ggplot(data = filter(petrel_season_mean_temp, Location == "Outside"), 
+       aes(x = datetime, y = mean))+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd), alpha = 0.25)+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b %Y")+
+  facet_wrap(~Habitat, ncol = 1)
+
+
+# Facet wrap version of temperature trend
+ggplot(data = petrel_season_mean_temp, aes(x = datetime, y = mean))+
+  geom_line()+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd), alpha = 0.25)+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b")+
+  facet_wrap(~Location, scales = "free_y")+
+  theme(strip.text.x = element_text(size = 15, color = "white"), 
+          strip.background = element_rect(fill="black"))
+
+```
+
+## Hourly plots
+
+```{r}
+
+# Summarise the mean temperature and standard deviation for inside and outside the burrows
+mean_temp <- temps %>%
+  group_by(Location, Hour) %>%
+  summarise(mean = mean(Temperature), sd = sd(Temperature),
+            n = n(), se = sd/sqrt(n))
+
+
+# Plot
+ggplot(mean_temp, aes(x = Hour, y = mean, group = Location))+
+  geom_line()+
+  geom_pointrange(aes(ymin=mean-sd, ymax=mean+sd))+
+  geom_point(size = 3,shape = 21, aes(fill = Location))+
+  scale_fill_manual(values=c('black','white'))+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Time of Day (h)") + ylab("Temperature (°C)")+
+  scale_x_continuous(breaks=seq(0,23,2))+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1)) +
+  theme(legend.position = c(0.15, 0.75))
+
+```
 
 
