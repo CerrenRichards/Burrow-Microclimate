@@ -546,9 +546,69 @@ Random = logger ID, day
 ```{r}
 library(nlme)
 
+## First look at the overall trend between the burrows
+##PUFFINS
+
+# Run a linear mixed-effects model
+m1 <- lme(temp ~ Burrow, 
+    random = ~1|datetime, 
+    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
+
+qqnorm(m1)
+plot(m1)
+hist(resid(m1))
+summary(m1)
+
+
+# Test whether a gls would provide a better fit
+m2 <- gls(temp ~ Burrow, 
+    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
+
+# Add temporal autocorrelation
+m3 <- gls(temp ~ Burrow,
+          cor=corARMA(q=4,form=~1|datetime),
+    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
+
+# Compare the three models
+# m1 has the lowest AIC score
+anova(m1, m2, m3)
+
+
+
+
+
+
+
+modelling <- ATPU_LSSP %>% filter(Location == "Inside") %>%
+  group_by(Date, Burrow, Species) %>%
+  summarise(Mean = mean(temp),
+            Max = max(temp), 
+            Min = min(temp))
+
+
+
+
 # build model to test the inter-nest differences in temperatures
 
+m.mean.puffin <- lme(Mean ~ Burrow, 
+    random = ~1|Date, 
+    data=filter(modelling, Species == "Atlantic puffin"))
 
+summary(m.mean.puffin)
+
+
+m.mean.petrel <- lme(Mean ~ Burrow, 
+    random = ~1|Date, 
+    data=filter(modelling, Species == "Leach's storm-petrel"))
+
+hist(resid(m.mean.petrel))
+plot(m.mean.petrel)
+
+
+
+m1 <- lme(temp ~ Burrow, 
+    random = ~1|datetime, 
+    data=filter(ATPU_LSSP, Species == "Leach's storm-petrel" & Location == "Inside"))
 
 ```
 
