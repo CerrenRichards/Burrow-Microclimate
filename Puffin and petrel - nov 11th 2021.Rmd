@@ -528,3 +528,29 @@ ggsave("stacked_buffer.png",
 ```
 
 
+## STATISTICAL SECTION
+
+To investigate inter-nest differences in nest air temperatures,
+we used random effects ANOVA, separately for
+the two phases of chick growth with nest temperature
+records as the dependent variable, nest ID as predictor
+and two random factors (temperature logger ID
+and day).
+
+
+
+TEMPERATURE~NEST_ID
+Random = logger ID, day
+
+
+```{r}
+library(nlme)
+
+# build model to test the inter-nest differences in temperatures
+
+
+
+```
+
+
+
