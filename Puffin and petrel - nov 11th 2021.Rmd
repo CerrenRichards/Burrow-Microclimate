@@ -530,18 +530,6 @@ ggsave("stacked_buffer.png",
 
 ## STATISTICAL SECTION
 
-To investigate inter-nest differences in nest air temperatures,
-we used random effects ANOVA, separately for
-the two phases of chick growth with nest temperature
-records as the dependent variable, nest ID as predictor
-and two random factors (temperature logger ID
-and day).
-
-
-
-TEMPERATURE~NEST_ID
-Random = logger ID, day
-
 
 ```{r}
 library(nlme)
@@ -559,6 +547,8 @@ plot(m1)
 hist(resid(m1))
 summary(m1)
 
+# 95% confidence intervals
+intervals(m1)
 
 # Test whether a gls would provide a better fit
 m2 <- gls(temp ~ Burrow, 
@@ -573,17 +563,6 @@ m3 <- gls(temp ~ Burrow,
 # m1 has the lowest AIC score
 anova(m1, m2, m3)
 
-
-
-## Calculate the mean variance between burrows
-mean_puffin <- ATPU_LSSP %>% filter(Location == "Inside") %>%
-  group_by(Burrow, Species) %>%
-  summarise(var = var(temp))
-
-
-mean_puffin %>% group_by(Species) %>%
-  summarise(mean = mean(var),
-            sd = sd(var))
 
 
 
@@ -623,6 +602,40 @@ plot(m.mean.petrel)
 m1 <- lme(temp ~ Burrow, 
     random = ~1|datetime, 
     data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
+
+
+
+m1 <- lm(temp ~ Burrow, 
+    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
+
+
+
+```
+
+
+## Summary statistics
+
+```{r}
+
+## Calculate the mean variance between burrows
+mean_puffin <- ATPU_LSSP %>% filter(Location == "Inside") %>%
+  group_by(Burrow, Species) %>%
+  summarise(var = var(temp))
+
+# The mean variation between the burrows
+mean_puffin %>% group_by(Species) %>%
+  summarise(mean = mean(var),
+            sd = sd(var))
+
+
+
+## The mean burrow temperatures
+ATPU_LSSP %>% 
+  group_by(Species, Location) %>%
+  summarise(mean = mean(temp),
+            sd = sd(temp))
+
+
 
 ```
 
