@@ -575,6 +575,20 @@ anova(m1, m2, m3)
 
 
 
+## Calculate the mean variance between burrows
+mean_puffin <- ATPU_LSSP %>% filter(Location == "Inside") %>%
+  group_by(Burrow, Species) %>%
+  summarise(var = var(temp))
+
+
+mean_puffin %>% group_by(Species) %>%
+  summarise(mean = mean(var),
+            sd = sd(var))
+
+
+
+
+
 
 
 
@@ -608,7 +622,7 @@ plot(m.mean.petrel)
 
 m1 <- lme(temp ~ Burrow, 
     random = ~1|datetime, 
-    data=filter(ATPU_LSSP, Species == "Leach's storm-petrel" & Location == "Inside"))
+    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
 
 ```
 
