@@ -641,3 +641,88 @@ ATPU_LSSP %>%
 
 
 
+
+## Burrow Features
+
+- circular mean and SD of the enterance and plot orientation 
+- mean +/- SD values for the burrows 
+
+
+WEATHER
+- match the weather data (30 mins) to the burrow temps (15 minutes) or the other way around?
+
+- predict a good burrow?
+
+
+```{r}
+setwd('/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data')
+
+# read in the burrow data
+burrows <- read.csv("burrow_features.csv")
+
+library(dplyr);library(tidyr)
+
+# Summarise the mean values for each of the burrow features
+burrow_means <- burrows %>% group_by(Species) %>%
+  summarise(logger.depth = mean(Logger.depth, na.rm =T),
+            logger.depth.sd = sd(Logger.depth, na.rm =T),
+            elevation = mean(Elevation),
+            elevation.sd = sd(Elevation),
+            width = mean(Width, na.rm =T),
+            width.sd = sd(Width, na.rm =T),
+            height = mean(Height, na.rm =T),
+            height.sd = sd(Height, na.rm =T),
+            depth = mean(Depth, na.rm =T),
+            depth.sd = sd(Depth, na.rm =T))
+
+
+```
+
+## Calculate the circular mean and SD for burrow orientation
+
+```{r}
+library(circular)
+
+## Filter the data for the two species for the analyses below
+ATPU <- burrows %>% filter(Species == "ATPU")
+LSSP <- burrows %>% filter(Species == "LSSP")
+
+## Function to convert degrees to radians and radians to degrees
+## because the circular functions below require radians 
+deg2rad <- function(deg) return(deg*pi/180)
+rad2deg <- function(rad) {(rad * 180) / (pi)}
+
+## Convert the burrow orientation from degrees to radians
+ATPU$orient.rad <- deg2rad(ATPU$Burrow.orientation)
+LSSP$orient.rad <- deg2rad(LSSP$Burrow.orientation)
+
+
+## Calculate the circular mean for burrow orientation
+
+## Atlantic puffins:
+mean.circular(ATPU$orient.rad)
+# Convert back to degrees
+rad2deg(1.774017) ## = 101.64
+
+## Leach's storm-petrels:
+mean.circular(LSSP$orient.rad)
+# Convert back to degrees
+rad2deg(2.341953) ## = 134.18
+
+## Calculate the SD for burrow orientation
+
+## Atlantic puffins:
+sd.circular(ATPU$orient.rad)
+# Convert back to degrees
+rad2deg(0.5637363) ## = 32.30
+
+## Leach's storm-petrels:
+sd.circular(LSSP$orient.rad)
+# Convert back to degrees
+rad2deg(1.222865) ## = 70.07
+
+```
+
+
+
+
