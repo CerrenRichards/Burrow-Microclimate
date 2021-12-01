@@ -644,9 +644,6 @@ ATPU_LSSP %>%
 
 ## Burrow Features
 
-- circular mean and SD of the enterance and plot orientation 
-- mean +/- SD values for the burrows 
-
 
 WEATHER
 - match the weather data (30 mins) to the burrow temps (15 minutes) or the other way around?
@@ -673,7 +670,9 @@ burrow_means <- burrows %>% group_by(Species) %>%
             height = mean(Height, na.rm =T),
             height.sd = sd(Height, na.rm =T),
             depth = mean(Depth, na.rm =T),
-            depth.sd = sd(Depth, na.rm =T))
+            depth.sd = sd(Depth, na.rm =T),
+            enter.area = mean(Enterance_Area, na.rm =T),
+            enter.area.sd = sd(Enterance_Area, na.rm =T))
 
 
 ```
