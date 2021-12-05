@@ -348,24 +348,6 @@ LSSPmaxmin <- maxmin2 %>% filter(Species == "Leach's storm-petrel")
 meanline <- maxmin2 %>% group_by(Species, Unit) %>%
   summarise(mean = mean(Temperature))
   
-# Create the plot
-ggplot()+
-  geom_violin(data = maxmin2, 
-              aes(x = reorder(Burrow, -mean), 
-                  y = Temperature, 
-                  fill = Unit, colour = Unit))+
-  scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
-  scale_colour_manual(values = c( "#E16E08","#F9E07F","#89B4C7")) +
-  xlab("Burrow ID") + ylab("Temperature (°C)")+
-  plottheme+
-  guides(alpha = FALSE, fill = FALSE, colour = FALSE)+
-  facet_grid(Unit~Species, scales = "free")+
-  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
-        strip.text.y = element_text(size = 16, color = "white", face = "bold"),
-        strip.background = element_rect(fill="black"))+
-  geom_hline(data = meanline, aes(yintercept = mean), linetype = "dashed")
-
-
 
 # Create an overall max, min, mean boxplot for all burrows
 box_mmmm <- ggplot()+
@@ -440,6 +422,10 @@ violing_LSSP<- ggplot()+
 ## Combine the plots
 library(patchwork)
 box_mmmm + (violin_ATPU / violing_LSSP) + plot_layout(widths=c(1,2))
+
+## Save plot
+ggsave("between_burrow.png", 
+       width = 300, height = 250, unit = "mm")
 
 ```
 
