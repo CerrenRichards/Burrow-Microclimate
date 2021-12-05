@@ -350,7 +350,8 @@ meanline <- maxmin2 %>% group_by(Species, Unit) %>%
   
 # Create the plot
 ggplot()+
-  geom_violin(data = maxmin2, aes(x = reorder(Burrow, -Temperature), 
+  geom_violin(data = maxmin2, 
+              aes(x = reorder(Burrow, -mean), 
                   y = Temperature, 
                   fill = Unit, colour = Unit))+
   scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
@@ -367,17 +368,78 @@ ggplot()+
 
 
 # Create an overall max, min, mean boxplot for all burrows
-ggplot()+
+box_mmmm <- ggplot()+
   geom_boxplot(data = maxmin2, aes(x = Unit, 
                   y = Temperature, 
                   fill = Unit))+
     scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
     plottheme+
     guides(alpha = FALSE, fill = FALSE, colour = FALSE)+
-  xlab("") + ylab("Temperature (°C)")+
-  facet_wrap(~Species)
+   ylab("Temperature (°C)")+
+  facet_wrap(~Species, ncol = 1, scales = "free")+
+    theme(strip.background = element_blank(),
+  strip.text.x = element_blank())+
+  theme(axis.title.x = element_blank())
 
 
+## Summarise the mean daily temperatures across all burrows so that we can order
+## the main plot by decreaing mean temp
+mean <- filter(maxmin2, Unit =="Daily Mean") %>% group_by(Species, Burrow) %>% 
+  summarise(mean = mean(Temperature))
+
+## Match to the means to the maxmin2 dataframe
+maxmin2 <- left_join(maxmin2, mean)
+
+## Filter the data for the two species for the analyses below
+ATPU <- maxmin2 %>% filter(Species == "Atlantic puffin")
+LSSP <- maxmin2 %>% filter(Species == "Leach's storm-petrel")
+
+
+# Create the between burrow variation violin plot
+## Atlantic puffins
+violin_ATPU<- ggplot()+
+  geom_violin(data = ATPU, 
+              aes(x = reorder(Burrow, -mean), 
+                  y = Temperature, 
+                  fill = Unit, colour = Unit))+
+  scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
+  scale_colour_manual(values = c( "#E16E08","#F9E07F","#89B4C7")) +
+  ylab("Temperature (°C)")+
+  plottheme+
+  guides(alpha = FALSE, fill = FALSE, colour = FALSE)+
+  facet_grid(Unit ~.)+
+  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
+        strip.text.y = element_text(size = 16, color = "white", face = "bold"),
+        strip.background = element_rect(fill="black"))+
+  geom_hline(data = filter(meanline,Species == "Atlantic puffin"), aes(yintercept = mean), linetype = "dashed")+
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank())
+
+
+## Leach's storm-petrels
+violing_LSSP<- ggplot()+
+  geom_violin(data = LSSP, 
+              aes(x = reorder(Burrow, -mean), 
+                  y = Temperature, 
+                  fill = Unit, colour = Unit))+
+  scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
+  scale_colour_manual(values = c( "#E16E08","#F9E07F","#89B4C7")) +
+  xlab("Burrow ID") + ylab("Temperature (°C)")+
+  plottheme+
+  guides(alpha = FALSE, fill = FALSE, colour = FALSE)+
+  facet_grid(Unit ~.)+
+  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
+        strip.text.y = element_text(size = 16, color = "white", face = "bold"),
+        strip.background = element_rect(fill="black"))+
+  geom_hline(data = filter(meanline,Species == "Leach's storm-petrel"), aes(yintercept = mean), linetype = "dashed")+
+   theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank())
+
+
+
+## Combine the plots
+library(patchwork)
+box_mmmm + (violin_ATPU / violing_LSSP) + plot_layout(widths=c(1,2))
 
 ```
 
