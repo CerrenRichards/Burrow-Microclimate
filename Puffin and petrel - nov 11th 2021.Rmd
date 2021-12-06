@@ -856,7 +856,12 @@ ggsave("stacked_buffer2.png",
 
 ## Buffer - weather version
 
-match the weather data to the plot data 
+- why are there gaps in the beginning - cut off too early in the weather data?
+
+- record every 30 mins? remove the 15 minute gaps
+- summarise the mean and SD for the open_join and forest_join
+- what to do about the different kestrel data?
+
 
 
 ```{r}
@@ -875,7 +880,35 @@ weather_burrow <- left_join(weather, ATPU_LSSP, by = "datetime2")
 open <- ATPU_LSSP %>% filter(Plot %in% c("Slope", "Open"))
 forest <- ATPU_LSSP %>% filter(Plot %in% c("Forest", "Near Forest"))
 
+# add extra column so they can join
+weather1$datetime2 <- weather1$DateTime
+weather2$datetime2 <- weather2$DateTime
 
+# Join the kestrel weather data and the temp logger data
+forest_join <- left_join(forest, weather1, by = "datetime2")
+open_join <- left_join(open, weather2, by = "datetime2")
+
+
+# Summarise the mean temperature and standard deviation for inside and outside the burrows
+seasonal_kestrel <- forest_join %>%
+  group_by(Species, Location, datetime, Date, Time) %>%
+  summarise(mean = mean(temp), sd = sd(temp),
+            n = n(), se = sd/sqrt(n))
+
+
+ggplot(data = forest_join, aes(x = datetime2, y = mean, group = Location))+
+  geom_line(aes(colour = Location, linetype = Location))+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd, fill = Location), alpha = 0.4)+
+  plottheme+
+  theme(legend.title = element_blank())+ 
+  ylab("Temperature (°C)")+
+  scale_colour_manual(values = c("#43A407", "#4E342E"))+
+  scale_fill_manual(values = c("#43A407", "#4E342E"))+
+  theme(legend.position = c(0.85, 0.70))+
+  facet_wrap(~Species, scales = "free_x")+
+  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
+        strip.background = element_rect(fill="black"),
+        axis.title.x = element_blank())
 
 
 
