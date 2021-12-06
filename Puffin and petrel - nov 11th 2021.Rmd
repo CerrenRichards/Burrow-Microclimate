@@ -243,6 +243,25 @@ heat <- ggplot(filter(season_mean_temp, Location == "Inside"),
 temp / heat
 
 
+ATPU_LSSP$Burrow <- as.character(ATPU_LSSP$Burrow)
+
+## plot of individual burrow variation
+ggplot(data = filter(ATPU_LSSP, Location =="Inside"), aes(x = datetime, y = temp, group = Burrow))+
+  geom_line(aes(colour = Burrow))+
+  #geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd, fill = Location), alpha = 0.4)+
+  plottheme+
+  theme(legend.title = element_blank())+ 
+  xlab("Date") + ylab("Temperature (°C)")+
+  #scale_colour_brewer(palette = "YlGnBu")+
+  scale_color_viridis(discrete = TRUE, alpha = 0.5)+
+  #scale_fill_manual(values = c("#43A407", "#4E342E"))+
+  theme(legend.position = "none")+
+  facet_wrap(~Species, scales = "free_x")+
+  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
+        strip.background = element_rect(fill="black"),
+        axis.title.x = element_blank())
+
+
 ```
 
 ## Hour of day average
@@ -837,7 +856,29 @@ ggsave("stacked_buffer2.png",
 
 ## Buffer - weather version
 
+match the weather data to the plot data 
+
+
 ```{r}
+
+# Rename the datetime column
+weather$datetime2 <- weather$DateTime
+
+# Match the weather data and the burrow logger data
+weather_burrow <- left_join(weather, ATPU_LSSP, by = "datetime2")
+
+
+#weather1 = "Forested Plot"
+#weather2 = "Open Plot"
+
+# Subset the logger data by the plot type that match the kestrel weather station data
+open <- ATPU_LSSP %>% filter(Plot %in% c("Slope", "Open"))
+forest <- ATPU_LSSP %>% filter(Plot %in% c("Forest", "Near Forest"))
+
+
+
+
+
 
 library(tidyr)
 
@@ -972,7 +1013,7 @@ ggsave("stacked_buffer2.png",
 
 ```{r}
 
-setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/2021/Weather Data 2021/Edited")
+setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Weather Data 2021/Edited")
 
 # Read in the weather data from the two kestrel weather meters
 weather1 <- read.csv("WEATHER_kestrel2581085.csv")
@@ -1009,7 +1050,6 @@ weather2$Station <- "Open Plot"
 
 # Join the two weather dataframes
 weather <- rbind(weather1, weather2)
-
 
 
 ```
