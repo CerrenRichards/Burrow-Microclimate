@@ -747,52 +747,55 @@ extreme <- rbind(extreme_cold_LSSP, extreme_heat_LSSP,
 
 
 # Jitter plot
+# puffins
 extreme_puffin<- ggplot(filter(extreme, Species == "Atlantic puffin"), aes(x = Extreme, y = offset)) +
   geom_boxplot( aes(fill = offset>0))+
   scale_fill_manual(values = c("#89B4C7", "#E16E08"))+
-  ylab(bquote(T[Buffer]~"(°C)"))+
+  ylab(bquote(T[Buffer]~"(°C)"))+ xlab("Thermal Event")+
   geom_hline(yintercept = 0, linetype="dashed", size = 1)+
     plottheme+
   theme(legend.position = "none")+
   facet_wrap(~Species)+
     theme(strip.text.x = element_blank(), 
-          strip.background = element_blank(),
-          axis.title.x = element_blank())
+          strip.background = element_blank())
 
-
+# petrels
 extreme_petrel<- ggplot(filter(extreme, Species == "Leach's storm-petrel"), aes(x = Extreme, y = offset)) +
   geom_boxplot( aes(fill = offset>0))+
   scale_fill_manual(values = c("#89B4C7", "#E16E08"))+
-  ylab(bquote(T[Buffer]~"(°C)"))+
+  ylab(bquote(T[Buffer]~"(°C)"))+ xlab("Thermal Event")+
   geom_hline(yintercept = 0, linetype="dashed", size = 1)+
     plottheme+
   theme(legend.position = "none")+
   facet_wrap(~Species)+
     theme(strip.text.x = element_blank(), 
-          strip.background = element_blank(),
-          axis.title.x = element_blank())
+          strip.background = element_blank())
 
 
 ## Create correlation
+# Puffins
 corr_puffin<-ggplot(filter(buffer, Species == "Atlantic puffin"), aes(x=Outside, y = Inside))+
   geom_point(alpha = 0.2)+
   ylab(bquote(T[Internal]~"(°C)"))+
   xlab(bquote(T[External]~"(°C)"))+
-  theme_bw(base_size = 20)+
+  theme_bw(base_size = 15)+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   theme(axis.title.y = element_text(vjust = 3)) +
   facet_wrap(~Species)+
+    plottheme+
    theme(strip.text.x = element_blank(), 
           strip.background = element_blank())
 
+# petrels
 corr_petrel<-ggplot(filter(buffer, Species == "Leach's storm-petrel"), aes(x=Outside, y = Inside))+
   geom_point(alpha = 0.2)+
   ylab(bquote(T[Internal]~"(°C)"))+
   xlab(bquote(T[External]~"(°C)"))+
-  theme_bw(base_size = 20)+
+  theme_bw(base_size = 15)+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   theme(axis.title.y = element_text(vjust = 3)) +
   facet_wrap(~Species)+
+   plottheme+
    theme(strip.text.x = element_blank(), 
           strip.background = element_blank())
 
@@ -804,7 +807,7 @@ tempall <- ggplot(data = season_mean_temp, aes(x = datetime, y = mean, group = L
   geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd, fill = Location), alpha = 0.4)+
   plottheme+
   theme(legend.title = element_blank())+ 
-  xlab("Date") + ylab("Temperature (°C)")+
+  ylab("Temperature (°C)")+
   scale_colour_manual(values = c("#43A407", "#4E342E"))+
   scale_fill_manual(values = c("#43A407", "#4E342E"))+
   theme(legend.position = c(0.85, 0.70))+
@@ -816,18 +819,414 @@ tempall <- ggplot(data = season_mean_temp, aes(x = datetime, y = mean, group = L
 
 
 # create the stacked plot
-tempall / (corr_puffin + extreme_puffin + corr_petrel + extreme_petrel) + plot_layout(widths=c(2,1))
+tempall / (corr_puffin | extreme_puffin | corr_petrel | extreme_petrel) 
 
 
-ggsave("stacked_buffer1.png", 
+# save the plot
+ggsave("stacked_buffer2.png", 
        dpi = 600, 
-       width = 250, height = 300, unit = "mm")
+       width = 350, height = 150, unit = "mm")
 
-
-# match the weather data to the internal burrow temps
-# sort out the layout of the plots
 
 ```
+
+
+
+
+
+
+## Buffer - weather version
+
+```{r}
+
+library(tidyr)
+
+## Sort the data
+buffer <- ATPU_LSSP %>% select(datetime, Date, Time, Species, Burrow, Plot, Location, temp)
+buffer <- buffer %>% spread(Location, temp)
+
+## Calculate the buffer
+buffer$offset <- buffer$Inside-buffer$Outside
+
+## Identify the extreme events
+## Here we define "extreme" as the 1 and 99 percentiles
+quant <- buffer %>%
+  group_by(Species) %>%
+  summarise(quantile1 = quantile(Outside, c(.01), na.rm = T),
+            quantile99 = quantile(Outside, c(.99), na.rm = T))
+
+
+## Filter out the extreme temperatures (Leach's)
+extreme_cold_LSSP <- filter(buffer, Outside <= 7.2 & Species == "Leach's storm-petrel")
+extreme_cold_LSSP$Extreme <- "Cold Extreme"
+mean(extreme_cold_LSSP$offset)
+
+extreme_heat_LSSP <- filter(buffer, Outside >= 26.2 & Species == "Leach's storm-petrel")
+extreme_heat_LSSP$Extreme <- "Heat Extreme"
+mean(extreme_heat_LSSP$offset)
+
+
+## Filter out the extreme temperatures (Puffin)
+extreme_cold_ATPU <- filter(buffer, Outside <= 10.3 & Species == "Atlantic puffin")
+extreme_cold_ATPU$Extreme <- "Cold Extreme"
+mean(extreme_cold_ATPU$offset, na.rm = T)
+
+extreme_heat_ATPU <- filter(buffer, Outside >= 40.4 & Species == "Atlantic puffin")
+extreme_heat_ATPU$Extreme <- "Heat Extreme"
+mean(extreme_heat_ATPU$offset, na.rm = T)
+
+
+
+## Join the dataframes
+extreme <- rbind(extreme_cold_LSSP, extreme_heat_LSSP, 
+                 extreme_cold_ATPU, extreme_heat_ATPU)
+
+
+# Jitter plot
+# puffins
+extreme_puffin<- ggplot(filter(extreme, Species == "Atlantic puffin"), aes(x = Extreme, y = offset)) +
+  geom_boxplot( aes(fill = offset>0))+
+  scale_fill_manual(values = c("#89B4C7", "#E16E08"))+
+  ylab(bquote(T[Buffer]~"(°C)"))+ xlab("Thermal Event")+
+  geom_hline(yintercept = 0, linetype="dashed", size = 1)+
+    plottheme+
+  theme(legend.position = "none")+
+  facet_wrap(~Species)+
+    theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
+
+# petrels
+extreme_petrel<- ggplot(filter(extreme, Species == "Leach's storm-petrel"), aes(x = Extreme, y = offset)) +
+  geom_boxplot( aes(fill = offset>0))+
+  scale_fill_manual(values = c("#89B4C7", "#E16E08"))+
+  ylab(bquote(T[Buffer]~"(°C)"))+ xlab("Thermal Event")+
+  geom_hline(yintercept = 0, linetype="dashed", size = 1)+
+    plottheme+
+  theme(legend.position = "none")+
+  facet_wrap(~Species)+
+    theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
+
+
+## Create correlation
+# Puffins
+corr_puffin<-ggplot(filter(buffer, Species == "Atlantic puffin"), aes(x=Outside, y = Inside))+
+  geom_point(alpha = 0.2)+
+  ylab(bquote(T[Internal]~"(°C)"))+
+  xlab(bquote(T[External]~"(°C)"))+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.title.y = element_text(vjust = 3)) +
+  facet_wrap(~Species)+
+    plottheme+
+   theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
+
+# petrels
+corr_petrel<-ggplot(filter(buffer, Species == "Leach's storm-petrel"), aes(x=Outside, y = Inside))+
+  geom_point(alpha = 0.2)+
+  ylab(bquote(T[Internal]~"(°C)"))+
+  xlab(bquote(T[External]~"(°C)"))+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.title.y = element_text(vjust = 3)) +
+  facet_wrap(~Species)+
+   plottheme+
+   theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
+
+
+
+# Temp trend Plot
+tempall <- ggplot(data = season_mean_temp, aes(x = datetime, y = mean, group = Location))+
+  geom_line(aes(colour = Location, linetype = Location))+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd, fill = Location), alpha = 0.4)+
+  plottheme+
+  theme(legend.title = element_blank())+ 
+  ylab("Temperature (°C)")+
+  scale_colour_manual(values = c("#43A407", "#4E342E"))+
+  scale_fill_manual(values = c("#43A407", "#4E342E"))+
+  theme(legend.position = c(0.85, 0.70))+
+  facet_wrap(~Species, scales = "free_x")+
+  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
+        strip.background = element_rect(fill="black"),
+        axis.title.x = element_blank())
+
+
+
+# create the stacked plot
+tempall / (corr_puffin | extreme_puffin | corr_petrel | extreme_petrel) 
+
+
+# save the plot
+ggsave("stacked_buffer2.png", 
+       dpi = 600, 
+       width = 350, height = 150, unit = "mm")
+
+
+```
+
+
+
+#### WEATHER DATA
+
+```{r}
+
+setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/2021/Weather Data 2021/Edited")
+
+# Read in the weather data from the two kestrel weather meters
+weather1 <- read.csv("WEATHER_kestrel2581085.csv")
+weather2 <- read.csv("WEATHER_kestrel2581086.csv")
+
+
+# Substitute the "p.m." and "a.m." because there are issues when converting 12hrs to 24hrs
+weather1$datetime <- gsub("p.m.", "pm", weather1$datetime)
+weather1$datetime <- gsub("a.m.", "am", weather1$datetime)
+
+weather2$datetime <- gsub("p.m.", "pm", weather2$datetime)
+weather2$datetime <- gsub("a.m.", "am", weather2$datetime)
+
+# Convert the time from 12 hrs to 24 hrs
+weather1$DateTime <- as.POSIXct(weather1$datetime, format="%Y-%m-%d %I:%M:%S %p")
+weather2$DateTime <- as.POSIXct(weather2$datetime, format="%Y-%m-%d %I:%M:%S %p")
+
+library(dplyr);library(lubridate)
+# Filter the data for the correct date range
+weather1 <- weather1 %>% filter(DateTime <= "2021-09-25 00:00:00")
+weather2 <- weather2 %>% filter(DateTime <= "2021-09-25 00:00:00")
+
+# Extract only the hour for making plots
+weather1$Time <- hour(weather1$DateTime) + minute(weather1$DateTime)/60
+weather2$Time <- hour(weather2$DateTime) + minute(weather2$DateTime)/60
+
+# Add a single date column
+weather1$Date <- as.Date(weather1$DateTime)
+weather2$Date <- as.Date(weather2$DateTime)
+
+# Assign station name
+weather1$Station <- "Forested Plot"
+weather2$Station <- "Open Plot"
+
+# Join the two weather dataframes
+weather <- rbind(weather1, weather2)
+
+
+
+```
+
+
+## Individual plots
+
+```{r}
+# Weather temperature trend
+ggplot(data = weather, aes(x = time, y = Temperature))+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  #scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b")+
+  facet_wrap(~Station, scales = "free_y", ncol = 2, nrow = 1)+
+  theme(strip.text.x = element_text(size = 15, color = "white"), 
+        strip.background = element_rect(fill="black"))
+
+
+
+# Barometric pressure trend
+ggplot(data = weather, aes(x = time, y = Barometric.Pressure))+
+  geom_line()+geom_point(shape = 21, colour = "black", fill = "white")+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Barometric Pressure (mb)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  #scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b")+
+  facet_wrap(~Station, ncol = 2, nrow = 1)+
+  theme(strip.text.x = element_text(size = 15, color = "white"), 
+        strip.background = element_rect(fill="black"))
+
+
+
+# Wind speed trend
+ggplot(data = weather, aes(x = time, y = Wind.Speed))+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Wind Speed (km/h)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  #scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b")+
+  facet_wrap(~Station, ncol = 2, nrow = 1)+
+  theme(strip.text.x = element_text(size = 15, color = "white"), 
+        strip.background = element_rect(fill="black"))
+
+
+# Crosswind trend
+ggplot(data = weather, aes(x = time, y = Crosswind))+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Crosswind (km/h)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  #scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b")+
+  facet_wrap(~Station, ncol = 2, nrow = 1)+
+  theme(strip.text.x = element_text(size = 15, color = "white"), 
+        strip.background = element_rect(fill="black"))
+
+
+
+# headwind trend
+ggplot(data = weather, aes(x = time, y = Headwind))+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Headwind (km/h)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  #scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b")+
+  facet_wrap(~Station, ncol = 2, nrow = 1)+
+  theme(strip.text.x = element_text(size = 15, color = "white"), 
+        strip.background = element_rect(fill="black"))
+
+
+
+# Wind Chill trend
+ggplot(data = weather, aes(x = time, y = Wind.Chill))+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Wind Chill (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  #scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b")+
+  facet_wrap(~Station, ncol = 2, nrow = 1)+
+  theme(strip.text.x = element_text(size = 15, color = "white"), 
+        strip.background = element_rect(fill="black"))
+
+
+# humidity trend
+ggplot(data = weather, aes(x = time, y = Relative.Humidity))+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Relative Humidity (%)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  #scale_x_datetime(date_breaks = "10 days", date_labels = "%d %b")+
+  facet_wrap(~Station, ncol = 2, nrow = 1)+
+  theme(strip.text.x = element_text(size = 15, color = "white"), 
+        strip.background = element_rect(fill="black"))
+
+
+```
+
+
+## Stacked 
+
+```{r}
+
+# Weather temperature trend
+tempfacet <- ggplot(data = weather, aes(x = DateTime, y = Temperature))+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  ylab("Temperature (°C)")+
+    theme(axis.title.x =element_blank(),
+        axis.text.x =element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(axis.title.y = element_text(vjust = 3))+
+  facet_wrap(~Station,ncol = 2, nrow = 1)+
+  theme(strip.text.x = element_text(size = 15, color = "white"), 
+        strip.background = element_rect(fill="black"))
+
+# Wind speed trend
+wind <- ggplot(data = weather, aes(x = DateTime, y = Wind.Speed))+
+  geom_bar(stat="identity")+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  ylab("Wind Speed (km/h)")+
+  theme(axis.title.x =element_blank(),
+        axis.text.x =element_blank(),
+        axis.ticks.x=element_blank())+
+  theme(axis.title.y = element_text(vjust = 3))+
+  facet_wrap(~Station, ncol = 2, nrow = 1)+
+  theme(strip.background = element_blank(),
+      strip.text.x = element_blank())
+
+
+
+# Barometric pressure trend
+pressure <- ggplot(data = weather, aes(x = DateTime, y = Barometric.Pressure))+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Barometric Pressure (mb)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+  facet_wrap(~Station, ncol = 2, nrow = 1)+
+  theme(strip.background = element_blank(),
+      strip.text.x = element_blank())
+
+
+
+
+# create the combined plot 
+library(patchwork)
+
+tempfacet / wind / pressure
+
+
+# Save the image
+ggsave("weather_plot.png", 
+       dpi = 600, 
+       width = 300, height = 200, unit = "mm")
+
+
+```
+
+
+## Create a tile plot of temperature
+
+```{r}
+
+library(ggplot2)
+
+# Weather temperature trend
+temp <- ggplot(data = weather1, aes(x = DateTime, y = Temperature))+
+  geom_line()+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  xlab("Date") + ylab("Temperature (°C)")+
+  theme(axis.title.y = element_text(vjust = 3))+
+  theme(axis.title.x = element_text(vjust = -1))+
+    theme(axis.title.x =element_blank(),
+        axis.text.x =element_blank(),
+        axis.ticks.x=element_blank())
+
+
+
+heat <- ggplot(weather1, aes(x = Date, y = Time, fill = Temperature)) +
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), # remove the major lines
+        panel.grid.minor = element_blank())+
+  geom_tile(colour = "white", size = 0.15)+
+  scale_fill_distiller(palette = "RdYlBu", direction = -1)+
+  ylab("Time of Day (h)")+ theme(axis.title.y = element_text(vjust = 3)) +
+  theme(legend.position="bottom")+
+  guides(fill = guide_colourbar(barwidth = 10, barheight = 0.5))
+
+
+
+
+
+library(patchwork)
+
+temp / heat
+
+```
+
 
 
 
@@ -1025,6 +1424,7 @@ sd.circular(LSSP$orient.rad)
 rad2deg(1.222865) ## = 70.07
 
 ```
+
 
 
 
