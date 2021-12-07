@@ -132,6 +132,11 @@ write.csv(temps_LSSP, "petrel_temps_formatted.csv")
 ## Join the formatted ATPU and LSSP data
 
 ```{r}
+## For reading in the data if the above steps have already been done:
+setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Temp data 2021")
+temps <- read.csv('ATPU_formatted_temps.csv')
+temps_LSSP <- read.csv('petrel_temps_formatted.csv')
+
 
 ## join the puffin and petrel data
 ATPU_LSSP <- rbind(temps, temps_LSSP)
@@ -150,6 +155,81 @@ ATPU_LSSP$datetime <- as.POSIXct(ATPU_LSSP$datetime, format='%Y-%m-%d %H:%M')
 ATPU_LSSP$Date <- as.Date(ATPU_LSSP$datetime)
 
 ```
+
+## Join the burrow features to the dataframe of temperatures
+
+```{r}
+library(tidyr);library(dplyr)
+
+setwd('/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data')
+
+# read in the burrow data
+burrows <- read.csv("burrow_features.csv")
+
+# For modelling analyses, we only need the internal burrow temperatures
+# We will filter the ATPU_LSSP dataframe to only include the internal logger data
+
+ATPU_LSSP %>% select(datetime, Date, Time, Species, Burrow, Location, Plot, temp) %>% 
+  spread(key = Location, value = temp)
+
+```
+
+
+
+## WEATHER DATA
+
+```{r}
+
+setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Weather Data 2021/Edited")
+
+# Read in the weather data from the two kestrel weather meters
+weather1 <- read.csv("WEATHER_kestrel2581085.csv")
+weather2 <- read.csv("WEATHER_kestrel2581086.csv")
+
+
+# Substitute the "p.m." and "a.m." because there are issues when converting 12hrs to 24hrs
+weather1$datetime <- gsub("p.m.", "pm", weather1$datetime)
+weather1$datetime <- gsub("a.m.", "am", weather1$datetime)
+
+weather2$datetime <- gsub("p.m.", "pm", weather2$datetime)
+weather2$datetime <- gsub("a.m.", "am", weather2$datetime)
+
+# Convert the time from 12 hrs to 24 hrs
+weather1$DateTime <- as.POSIXct(weather1$datetime, format="%Y-%m-%d %I:%M:%S %p")
+weather2$DateTime <- as.POSIXct(weather2$datetime, format="%Y-%m-%d %I:%M:%S %p")
+
+library(dplyr);library(lubridate)
+# Filter the data for the correct date range
+weather1 <- weather1 %>% filter(DateTime <= "2021-09-25 00:00:00")
+weather2 <- weather2 %>% filter(DateTime <= "2021-09-25 00:00:00")
+
+# Extract only the hour for making plots
+weather1$Time <- hour(weather1$DateTime) + minute(weather1$DateTime)/60
+weather2$Time <- hour(weather2$DateTime) + minute(weather2$DateTime)/60
+
+# Add a single date column
+weather1$Date <- as.Date(weather1$DateTime)
+weather2$Date <- as.Date(weather2$DateTime)
+
+# Assign station name
+weather1$Station <- "Forested Plot"
+weather2$Station <- "Open Plot"
+
+# Join the two weather dataframes
+weather <- rbind(weather1, weather2)
+
+
+```
+
+
+
+
+
+
+
+
+
+
 
 ## Create seasonal temperature trend plot
 
@@ -890,20 +970,24 @@ open_join <- left_join(open, weather2, by = "datetime2")
 
 
 # Summarise the mean temperature and standard deviation for inside and outside the burrows
-seasonal_kestrel <- forest_join %>%
-  group_by(Species, Location, datetime, Date, Time) %>%
-  summarise(mean = mean(temp), sd = sd(temp),
-            n = n(), se = sd/sqrt(n))
+season <- forest_join %>%
+  group_by(Species, Location, datetime2) %>%
+  summarise(mean = mean(temp), 
+            sd = sd(temp),
+            meankest = mean(Temperature),
+            sdkest = sd(Temperature))
 
 
-ggplot(data = forest_join, aes(x = datetime2, y = mean, group = Location))+
-  geom_line(aes(colour = Location, linetype = Location))+
-  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd, fill = Location), alpha = 0.4)+
+ggplot()+
+  geom_line(data = filter(season_mean_temp, Location == "Inside"),
+            aes(x = datetime, y = mean))+
+  geom_point(data = forest_join, aes(x = datetime2, y = Temperature, alpha = 0.3))+
+  #geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd, fill = Location), alpha = 0.4)+
   plottheme+
   theme(legend.title = element_blank())+ 
   ylab("Temperature (°C)")+
-  scale_colour_manual(values = c("#43A407", "#4E342E"))+
-  scale_fill_manual(values = c("#43A407", "#4E342E"))+
+  #scale_colour_manual(values = c("#43A407", "#4E342E"))+
+ # scale_fill_manual(values = c("#43A407", "#4E342E"))+
   theme(legend.position = c(0.85, 0.70))+
   facet_wrap(~Species, scales = "free_x")+
   theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
@@ -1041,52 +1125,7 @@ ggsave("stacked_buffer2.png",
 ```
 
 
-
-#### WEATHER DATA
-
-```{r}
-
-setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Weather Data 2021/Edited")
-
-# Read in the weather data from the two kestrel weather meters
-weather1 <- read.csv("WEATHER_kestrel2581085.csv")
-weather2 <- read.csv("WEATHER_kestrel2581086.csv")
-
-
-# Substitute the "p.m." and "a.m." because there are issues when converting 12hrs to 24hrs
-weather1$datetime <- gsub("p.m.", "pm", weather1$datetime)
-weather1$datetime <- gsub("a.m.", "am", weather1$datetime)
-
-weather2$datetime <- gsub("p.m.", "pm", weather2$datetime)
-weather2$datetime <- gsub("a.m.", "am", weather2$datetime)
-
-# Convert the time from 12 hrs to 24 hrs
-weather1$DateTime <- as.POSIXct(weather1$datetime, format="%Y-%m-%d %I:%M:%S %p")
-weather2$DateTime <- as.POSIXct(weather2$datetime, format="%Y-%m-%d %I:%M:%S %p")
-
-library(dplyr);library(lubridate)
-# Filter the data for the correct date range
-weather1 <- weather1 %>% filter(DateTime <= "2021-09-25 00:00:00")
-weather2 <- weather2 %>% filter(DateTime <= "2021-09-25 00:00:00")
-
-# Extract only the hour for making plots
-weather1$Time <- hour(weather1$DateTime) + minute(weather1$DateTime)/60
-weather2$Time <- hour(weather2$DateTime) + minute(weather2$DateTime)/60
-
-# Add a single date column
-weather1$Date <- as.Date(weather1$DateTime)
-weather2$Date <- as.Date(weather2$DateTime)
-
-# Assign station name
-weather1$Station <- "Forested Plot"
-weather2$Station <- "Open Plot"
-
-# Join the two weather dataframes
-weather <- rbind(weather1, weather2)
-
-
-```
-
+## WEATHER 
 
 ## Individual plots
 
@@ -1428,10 +1467,6 @@ WEATHER
 
 
 ```{r}
-setwd('/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data')
-
-# read in the burrow data
-burrows <- read.csv("burrow_features.csv")
 
 library(dplyr);library(tidyr)
 
