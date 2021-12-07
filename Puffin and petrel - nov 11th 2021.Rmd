@@ -183,6 +183,18 @@ burrows <- burrows %>% select(Species, Burrow, Elevation:Enterance_Area)
 # Join the burrow feature data to the model_df dataframe
 model_df <- left_join(model_df, burrows)
 
+# The following burrows lost loggers, so we will remove them from the dataframe
+# Missing Outside logger - Burrow 6
+# Missing Inside logger - Burrows 1, 2, 3, 15, 21, 27, 29
+# Internal logger from burrow 9 was found on the ground outside the burrow -
+# We will therefore exclude burrow 9 data also 
+model_df <- model_df %>% 
+  filter(!Burrow %in% c(1, 2, 3, 6, 9, 15, 21, 27, 29))
+
+## NOTE: burrow 36 is missing a width - because it had two burrow enternaces
+
+
+
 ```
 
 
