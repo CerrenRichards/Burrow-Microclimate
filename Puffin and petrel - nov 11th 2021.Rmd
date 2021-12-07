@@ -166,11 +166,22 @@ setwd('/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data')
 # read in the burrow data
 burrows <- read.csv("burrow_features.csv")
 
-# For modelling analyses, we only need the internal burrow temperatures
-# We will filter the ATPU_LSSP dataframe to only include the internal logger data
+# replace species abbreviations for full names
+burrows$Species[burrows$Species == "ATPU"] <- "Atlantic puffin"
+burrows$Species[burrows$Species == "LSSP"] <- "Leach's storm-petrel"
 
-ATPU_LSSP %>% select(datetime, Date, Time, Species, Burrow, Location, Plot, temp) %>% 
+# Create the dataframe for modelling and further analyses
+# Spread the dataframe so that there is an individual 
+# column for internal and external temperatures
+model_df<- ATPU_LSSP %>% 
+  select(datetime, Date, Time, Species, Burrow, Location, Plot, temp) %>% 
   spread(key = Location, value = temp)
+
+# Select the columns that we want to join to the model_df
+burrows <- burrows %>% select(Species, Burrow, Elevation:Enterance_Area)
+
+# Join the burrow feature data to the model_df dataframe
+model_df <- left_join(model_df, burrows)
 
 ```
 
