@@ -53,7 +53,8 @@ temps$Time <- hour(temps$datetime) + minute(temps$datetime)/60
 
 # Filter the data for before the loggers were placed in the burrows 
 # and after they were removed
-temps <- temps %>% filter(datetime >= "2021-07-16 15:00:00") %>% 
+# Also for when the kestrel weather stations were placed, so everything matches up
+temps <- temps %>% filter(datetime >= "2021-07-17 17:00:00") %>% 
   filter(datetime <= "2021-08-19 00:00:00")
 
 ```
@@ -136,6 +137,7 @@ write.csv(temps_LSSP, "petrel_temps_formatted.csv")
 setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Temp data 2021")
 temps <- read.csv('ATPU_formatted_temps.csv')
 temps_LSSP <- read.csv('petrel_temps_formatted.csv')
+temps <- temps %>% filter(datetime >= "2021-07-17 17:00:00")
 
 
 ## join the puffin and petrel data
@@ -189,17 +191,20 @@ model_df <- left_join(model_df, burrows)
 # Internal logger from burrow 9 was found on the ground outside the burrow -
 # We will therefore exclude burrow 9 data also 
 model_df <- model_df %>% 
-  filter(!Burrow %in% c(1, 2, 3, 6, 9, 15, 21, 27, 29))
+  filter(!Burrow %in% c(1, 2, 3, 9, 15, 21, 27, 29))
 
-## NOTE: burrow 36 is missing a width - because it had two burrow enternaces
-
+## **************************
+## NOTE: Burrow 36 is missing a width - because it had two burrow entrances
+## NOTE: Burrow 6 does not have external logger data
+## **************************
 
 
 ```
 
 
-
 ## WEATHER DATA
+
+Format the weather data
 
 ```{r}
 
@@ -218,21 +223,21 @@ weather2$datetime <- gsub("p.m.", "pm", weather2$datetime)
 weather2$datetime <- gsub("a.m.", "am", weather2$datetime)
 
 # Convert the time from 12 hrs to 24 hrs
-weather1$DateTime <- as.POSIXct(weather1$datetime, format="%Y-%m-%d %I:%M:%S %p")
-weather2$DateTime <- as.POSIXct(weather2$datetime, format="%Y-%m-%d %I:%M:%S %p")
+weather1$datetime <- as.POSIXct(weather1$datetime, format="%Y-%m-%d %I:%M:%S %p")
+weather2$datetime <- as.POSIXct(weather2$datetime, format="%Y-%m-%d %I:%M:%S %p")
 
 library(dplyr);library(lubridate)
 # Filter the data for the correct date range
-weather1 <- weather1 %>% filter(DateTime <= "2021-09-25 00:00:00")
-weather2 <- weather2 %>% filter(DateTime <= "2021-09-25 00:00:00")
+weather1 <- weather1 %>% filter(datetime <= "2021-09-25 00:00:00")
+weather2 <- weather2 %>% filter(datetime <= "2021-09-25 00:00:00")
 
 # Extract only the hour for making plots
-weather1$Time <- hour(weather1$DateTime) + minute(weather1$DateTime)/60
-weather2$Time <- hour(weather2$DateTime) + minute(weather2$DateTime)/60
+weather1$Time <- hour(weather1$datetime) + minute(weather1$datetime)/60
+weather2$Time <- hour(weather2$datetime) + minute(weather2$datetime)/60
 
 # Add a single date column
-weather1$Date <- as.Date(weather1$DateTime)
-weather2$Date <- as.Date(weather2$DateTime)
+weather1$Date <- as.Date(weather1$datetime)
+weather2$Date <- as.Date(weather2$datetime)
 
 # Assign station name
 weather1$Station <- "Forested Plot"
@@ -241,10 +246,33 @@ weather2$Station <- "Open Plot"
 # Join the two weather dataframes
 weather <- rbind(weather1, weather2)
 
-
 ```
 
+## Join the weather data to the model_df
 
+weather1 = "Forested Plot"
+weather2 = "Open Plot"
+
+The kestrel weather stations were placed in different plots, so we need to make sure the correct weather data is matched up to the logger data
+```{r}
+
+# Subset the logger data by the plot type that match the kestrel weather station data
+open <- model_df %>% filter(Plot %in% c("Slope", "Open"))
+forest <- model_df %>% filter(Plot %in% c("Forest", "Near Forest"))
+
+# Join the kestrel weather data and the temp logger data
+forest_join <- left_join(forest, weather1)
+open_join <- left_join(open, weather2)
+
+# join the data back together again
+model_df_long <- rbind(forest_join, open_join)
+
+# kestrel weather data were only recorded every 30 minutes 
+# while logger data were every 15 minutes
+# we will filter the logger data so it matches the kestrel data
+model_df_short <- model_df_long %>% filter(!is.na(Temperature))
+
+```
 
 
 
