@@ -254,6 +254,7 @@ weather1 = "Forested Plot"
 weather2 = "Open Plot"
 
 The kestrel weather stations were placed in different plots, so we need to make sure the correct weather data is matched up to the logger data
+
 ```{r}
 
 # Subset the logger data by the plot type that match the kestrel weather station data
@@ -275,6 +276,82 @@ model_df_short <- model_df_long %>% filter(!is.na(Temperature))
 ```
 
 
+## Explore the buffering
+
+negative = inside colder than outside
+positive = warmer than outside
+
+outlogger is warmer or colder than the kestrel
+```{r}
+
+## How do the external loggers compare to the kestrel weather station
+# Positive = logger is warmer than kestrel
+# Negative = logger is colder than kestrel
+model_df_short$diff <- model_df_short$Outside - model_df_short$Temperature
+
+# Plot the difference
+ggplot(data = model_df_short, aes(x = datetime, y = diff, group = Burrow))+
+  geom_line(aes(colour = Burrow))+
+  plottheme+
+  theme(legend.title = element_blank())+ 
+  xlab("Date") + ylab("Temperature difference (°C)")+
+  #scale_color_viridis(discrete = TRUE, alpha = 0.5)+
+  theme(legend.position = "none")+
+  facet_wrap(~Species, scales = "free_x")+
+  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
+        strip.background = element_rect(fill="black"),
+        axis.title.x = element_blank())
+
+# Logger buffer
+model_df_short$buffer_logger <- model_df_short$Inside - model_df_short$Outside
+
+# kestrel buffer
+model_df_short$buffer_kestrel <- model_df_short$Inside - model_df_short$Temperature
+```
+
+
+
+
+
+## MODELLING
+
+Eight modelling steps from Zurr et al. (2010) "A protocol for data exploration to avoid common statistical problems":
+
+1. Are there outliers in Y and X?
+2. Do we have homogeneity of variance?
+3. Are the data normally distributed?
+4. Are there lots of zeros in the data?
+5. Is there collinearity among the covariates?
+6. What are the relationships between Y and X variables?
+7. Should we consider interactions?
+8. Are observations of the response variable independent?
+
+
+```{r}
+
+
+
+
+
+# Look for multicolinearity 
+
+library(GGally)
+
+ggpairs(filter(model_df_short, Species == "Atlantic puffin"), 
+        columns = c(7,8,9,12:18, 21, 24)) 
+
+ggpairs(filter(model_df_short, Species == "Leach's storm-petrel"), 
+        columns = c(7,8,9,12,13)) 
+
+
+pairs(model_df_short[,c(7,8,9,12:18, 21, 24)], pch = 19, lower.panel = NULL)
+
+
+
+library(psych)
+pairs.panels(model_df_short[,c(7,8,9,12:18, 21, 24)],
+             method = "pearson")
+```
 
 
 
