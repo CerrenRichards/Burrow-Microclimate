@@ -1091,14 +1091,6 @@ ggsave("stacked_buffer2.png",
 ```{r}
 
 
-# Summarise the mean temperature and standard deviation for inside and outside the burrows
-season <- forest_join %>%
-  group_by(Species, Location, datetime2) %>%
-  summarise(mean = mean(temp), 
-            sd = sd(temp),
-            meankest = mean(Temperature),
-            sdkest = sd(Temperature))
-
 
 ggplot()+
   geom_line(data = filter(season_mean_temp, Location == "Inside"),
@@ -1212,16 +1204,33 @@ corr_petrel<-ggplot(filter(model_df_short, Species == "Leach's storm-petrel"),
           strip.background = element_blank())
 
 
+## NEED TO TEST FOR NORMALLITY FIRST
 
-# Temp trend Plot
-tempall <- ggplot(data = season_mean_temp, aes(x = datetime, y = mean, group = Location))+
-  geom_line(aes(colour = Location, linetype = Location))+
-  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd, fill = Location), alpha = 0.4)+
+# Calculate the correlation
+
+lssp_cor <- filter(model_df_short, Species == "Leach's storm-petrel")
+atpu_cor <- filter(model_df_short, Species == "Atlantic puffin")
+
+cor.test(lssp_cor$Temperature, lssp_cor$Inside) # R = 0.35 [0.34-0.36] p < 0.001
+cor.test(atpu_cor$Temperature, atpu_cor$Inside) # R = 0.38 [0.37-0.39] p < 0.001
+
+# Summarise the mean temperature and standard deviation for inside and outside the burrows
+season <- model_df_short %>%
+  group_by(Species, datetime) %>%
+  summarise(mean = mean(Inside), 
+            sd = sd(Inside),
+            meankest = mean(Temperature),
+            sdkest = sd(Temperature))
+
+
+tempall <- ggplot(data = season, aes(x = datetime, y = mean))+
+  geom_line(colour = "#4E342E", linetype = "dashed")+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd), 
+              fill = "#4E342E",alpha = 0.4)+
+  geom_line(aes(x = datetime, y = meankest), colour = "#43A407")+
   plottheme+
   theme(legend.title = element_blank())+ 
   ylab("Temperature (°C)")+
-  scale_colour_manual(values = c("#43A407", "#4E342E"))+
-  scale_fill_manual(values = c("#43A407", "#4E342E"))+
   theme(legend.position = c(0.85, 0.70))+
   facet_wrap(~Species, scales = "free_x")+
   theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
@@ -1235,7 +1244,7 @@ tempall / (corr_puffin | extreme_puffin | corr_petrel | extreme_petrel)
 
 
 # save the plot
-ggsave("stacked_buffer2.png", 
+ggsave("stacked_buffer_weather.png", 
        dpi = 600, 
        width = 350, height = 150, unit = "mm")
 
