@@ -273,6 +273,7 @@ model_df_long <- rbind(forest_join, open_join)
 # we will filter the logger data so it matches the kestrel data
 model_df_short <- model_df_long %>% filter(!is.na(Temperature))
 
+
 ```
 
 
@@ -313,14 +314,41 @@ model_df_short$buffer_logger <- model_df_short$Inside - model_df_short$Outside
 # kestrel buffer
 model_df_short$buffer_kestrel <- model_df_short$Inside - model_df_short$Temperature
 
+
+## Calculate the elliptical cylinder volume of the burrow for the modelling
+model_df_short$volume <- pi * (model_df_short$Width/2) * (model_df_short$Height/2) * model_df_short$Depth
+
+
+ggplot(data = model_df_short, aes(x = Species, y = volume))+
+  geom_violin()+
+  plottheme
+
+
+
+# Filter the dataframe for the different species
+# because separate models will be run for the species
+lssp <- filter(model_df_short, Species == "Leach's storm-petrel")
+atpu <- filter(model_df_short, Species == "Atlantic puffin")
+
+
 # Explore the data
-hist(model_df_short$buffer_logger)
-hist(model_df_short$buffer_kestrel)
-hist(model_df_short$Outside)
-hist(model_df_short$Inside)
-hist(model_df_short$Temperature)
+hist(lssp$buffer_logger)
+hist(atpu$buffer_logger)
+
+hist(lssp$buffer_kestrel)
+hist(atpu$buffer_kestrel)
+
+hist(lssp$Outside)
+hist(atpu$Outside)
+
+hist(lssp$Inside)
+hist(atpu$Inside)
+
+hist(lssp$Temperature)
+hist(atpu$Temperature)
+
 hist(weather$Temperature)
-hist(model_df_short$diff)
+
 
 
 ```
@@ -1124,21 +1152,23 @@ quant_weather <- model_df_short %>%
 extreme_cold_LSSP <- filter(model_df_short, Temperature <= 6.5 & Species == "Leach's storm-petrel")
 extreme_cold_LSSP$Extreme <- "Cold Extreme"
 mean(extreme_cold_LSSP$buffer_kestrel) # 7.3838 deg C
+sd(extreme_cold_LSSP$buffer_kestrel) #1.214295
 
 extreme_heat_LSSP <- filter(model_df_short, Temperature >= 25.7 & Species == "Leach's storm-petrel")
 extreme_heat_LSSP$Extreme <- "Heat Extreme"
 mean(extreme_heat_LSSP$buffer_kestrel) #-9.437 deg C
-
+sd(extreme_heat_LSSP$buffer_kestrel) # 1.409367
 
 ## Filter out the extreme temperatures (Puffin)
 extreme_cold_ATPU <- filter(model_df_short, Temperature <= 10 & Species == "Atlantic puffin")
 extreme_cold_ATPU$Extreme <- "Cold Extreme"
 mean(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 8.049758 deg C
+sd(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 1.534774
 
 extreme_heat_ATPU <- filter(model_df_short, Temperature >= 25.6 & Species == "Atlantic puffin")
 extreme_heat_ATPU$Extreme <- "Heat Extreme"
 mean(extreme_heat_ATPU$buffer_kestrel, na.rm = T) # -5.385507 deg C
-
+sd(extreme_heat_ATPU$buffer_kestrel, na.rm = T) #1.81329
 
 
 ## Join the dataframes
@@ -1207,12 +1237,8 @@ corr_petrel<-ggplot(filter(model_df_short, Species == "Leach's storm-petrel"),
 ## NEED TO TEST FOR NORMALLITY FIRST
 
 # Calculate the correlation
-
-lssp_cor <- filter(model_df_short, Species == "Leach's storm-petrel")
-atpu_cor <- filter(model_df_short, Species == "Atlantic puffin")
-
-cor.test(lssp_cor$Temperature, lssp_cor$Inside) # R = 0.35 [0.34-0.36] p < 0.001
-cor.test(atpu_cor$Temperature, atpu_cor$Inside) # R = 0.38 [0.37-0.39] p < 0.001
+cor.test(lssp$Temperature, lssp$Inside) # R = 0.35 [0.34-0.36] p < 0.001
+cor.test(atpu$Temperature, atpu$Inside) # R = 0.38 [0.37-0.39] p < 0.001
 
 # Summarise the mean temperature and standard deviation for inside and outside the burrows
 season <- model_df_short %>%
