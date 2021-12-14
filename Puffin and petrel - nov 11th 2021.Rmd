@@ -349,7 +349,12 @@ hist(atpu$Temperature)
 
 hist(weather$Temperature)
 
+library(mgcv)
 
+
+m1 <- gamm(data = lssp,
+           buffer_kestrel~s(Enterance_Area) + s(volume),
+           random = list(Burrow = ~1))
 
 ```
 
