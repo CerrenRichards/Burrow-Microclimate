@@ -531,7 +531,6 @@ mean_temp <- ATPU_LSSP %>%
   summarise(mean = mean(temp), sd = sd(temp),
             n = n(), se = sd/sqrt(n))
 
-
 # temperature trend line
 ggplot(data = mean_temp, aes(x = Time, y = mean, group = Location))+
   geom_line(aes(colour = Location, linetype = Location))+
@@ -546,6 +545,48 @@ ggplot(data = mean_temp, aes(x = Time, y = mean, group = Location))+
   facet_wrap(~Species, scales = "free_x")+
   theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
         strip.background = element_rect(fill="black"))
+
+
+
+
+## Create a second plot with the kestrel weather data 
+
+# Summarise the weather data
+weather_sum <- weather %>% group_by(Time) %>%
+    summarise(mean = mean(Temperature), sd = sd(Temperature),
+            n = n(), se = sd/sqrt(n))
+
+
+#gather the data 
+maxmin_season <- model_df_short %>% select(Date, Time, 
+                                           Species, Outside, 
+                                           Inside, Temperature) %>%
+  gather(Location, Temp, Outside:Temperature)
+
+# Give the kestrel data a new name
+maxmin_season$Location[maxmin_season$Location == "Temperature"] <- "Air"
+
+# Burrow 6 is missing
+maxmin_season <- maxmin_season %>% group_by(Time, Species, Location) %>%
+    summarise(Mean = mean(Temp, na.rm = T),
+            Max = max(Temp, na.rm = T), 
+            Min = min(Temp, na.rm = T))
+
+ggplot(data = maxmin_season, aes(x = Time, y = Mean, group = Location, linetype = Location))+
+  #geom_line(aes(colour = Location, linetype = Location))+
+  geom_ribbon(aes(ymin=Min, ymax=Max, fill = Location, linetype = Location), alpha = 0.35)
+  xlab("Time of Day (h)") + ylab("Temperature (°C)")+
+  scale_x_continuous(breaks=seq(0,23,4))+
+  plottheme+
+  theme(legend.title = element_blank())+ 
+  #scale_colour_manual(values = c("#43A407", "#4E342E", "red"))+
+  #scale_fill_manual(values = c("#43A407", "#4E342E", "red"))+
+  theme(legend.position = c(0.9, 0.8))+
+  facet_wrap(~Species, scales = "free_x")+
+  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
+        strip.background = element_rect(fill="black"))
+
+
 
 ```
 
@@ -695,7 +736,9 @@ meanline <- maxmin2 %>% group_by(Species, Unit) %>%
 puffin_box <- ggplot()+
   geom_boxplot(data = ATPUmaxmin, aes(x = Unit, 
                   y = Temperature, 
-                  fill = Unit))+
+                  fill = Unit), 
+               outlier.shape = NA,
+               width = 0.5)+
     scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
     plottheme+
     guides(alpha = FALSE, fill = FALSE, colour = FALSE)+
@@ -712,7 +755,9 @@ puffin_box <- ggplot()+
 petrel_box <- ggplot()+
   geom_boxplot(data = LSSPmaxmin, aes(x = Unit, 
                   y = Temperature, 
-                  fill = Unit))+
+                  fill = Unit), 
+               outlier.shape = NA,
+               width = 0.5)+
     scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
     plottheme+
     guides(alpha = FALSE, fill = FALSE, colour = FALSE)+
