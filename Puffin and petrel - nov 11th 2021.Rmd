@@ -318,9 +318,9 @@ model_df_short$buffer_kestrel <- model_df_short$Inside - model_df_short$Temperat
 ## Calculate the elliptical cylinder volume of the burrow for the modelling
 model_df_short$volume <- pi * (model_df_short$Width/2) * (model_df_short$Height/2) * model_df_short$Depth
 
-
+## Visualise the difference in burrow volume between species
 ggplot(data = model_df_short, aes(x = Species, y = volume))+
-  geom_violin()+
+  geom_boxplot()+
   plottheme
 
 
@@ -352,8 +352,8 @@ hist(weather$Temperature)
 library(mgcv)
 
 
-m1 <- gamm(data = lssp,
-           buffer_kestrel~s(Enterance_Area) + s(volume),
+m2 <- gamm(data = lssp,
+           buffer_kestrel~s(Enterance_Area) + s(Height) + s(Width) + s(Depth),
            random = list(Burrow = ~1))
 
 ```
@@ -594,7 +594,6 @@ box_mmmm <- ggplot()+
   strip.text.x = element_blank())+
   theme(axis.title.x = element_blank())
 
-
 ## Summarise the mean daily temperatures across all burrows so that we can order
 ## the main plot by decreaing mean temp
 mean <- filter(maxmin2, Unit =="Daily Mean") %>% group_by(Species, Burrow) %>% 
@@ -661,6 +660,140 @@ ggsave("between_burrow.png",
 ```
 
 
+## Max, min, mean - That needs making in GIMP
+
+```{r}
+
+library(tidyr)
+
+## Daily max, min and mean - no gray lines
+
+## Summarise the daily max, min and mean for each burrow
+maxmin <- ATPU_LSSP %>% filter(Location == "Inside") %>%
+  group_by(Date, Burrow, Species) %>%
+  summarise(`Daily Mean` = mean(temp),
+            `Daily Max.` = max(temp), 
+            `Daily Min.` = min(temp))
+
+# Gather the data
+maxmin2 <- maxmin %>% gather(Unit, Temperature, `Daily Mean`:`Daily Min.`)
+maxmin2$Burrow <- as.character(maxmin2$Burrow)
+
+
+## Daily max, min and mean - with gray lines
+ATPUmaxmin <- maxmin2 %>% filter(Species == "Atlantic puffin")
+LSSPmaxmin <- maxmin2 %>% filter(Species == "Leach's storm-petrel")
+
+## Plot a facet wrap version
+
+# Calculate the mean line
+meanline <- maxmin2 %>% group_by(Species, Unit) %>%
+  summarise(mean = mean(Temperature))
+  
+
+## Individual boxplots
+puffin_box <- ggplot()+
+  geom_boxplot(data = ATPUmaxmin, aes(x = Unit, 
+                  y = Temperature, 
+                  fill = Unit))+
+    scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
+    plottheme+
+    guides(alpha = FALSE, fill = FALSE, colour = FALSE)+
+  facet_wrap(~Unit, scales = "free_x", ncol = 1)+
+  theme(strip.text.x = element_blank(),
+        strip.text.y = element_blank(),
+        strip.background = element_blank())+
+    scale_y_continuous(breaks=seq(12,25,4))+
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank())
+
+petrel_box <- ggplot()+
+  geom_boxplot(data = LSSPmaxmin, aes(x = Unit, 
+                  y = Temperature, 
+                  fill = Unit))+
+    scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
+    plottheme+
+    guides(alpha = FALSE, fill = FALSE, colour = FALSE)+
+  facet_wrap(~Unit, scales = "free_x", ncol = 1)+
+  theme(strip.text.x = element_blank(),
+        strip.text.y = element_blank(),
+        strip.background = element_blank())+
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank())
+
+
+## Summarise the mean daily temperatures across all burrows so that we can order
+## the main plot by decreaing mean temp
+mean <- filter(maxmin2, Unit =="Daily Mean") %>% group_by(Species, Burrow) %>% 
+  summarise(mean = mean(Temperature))
+
+## Match to the means to the maxmin2 dataframe
+maxmin2 <- left_join(maxmin2, mean)
+
+## Filter the data for the two species for the analyses below
+ATPU <- maxmin2 %>% filter(Species == "Atlantic puffin")
+LSSP <- maxmin2 %>% filter(Species == "Leach's storm-petrel")
+
+
+# Create the between burrow variation violin plot
+## Atlantic puffins
+violin_ATPU<- ggplot()+
+  geom_violin(data = ATPU, 
+              aes(x = reorder(Burrow, -mean), 
+                  y = Temperature, 
+                  fill = Unit, colour = Unit))+
+  scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
+  scale_colour_manual(values = c( "#E16E08","#F9E07F","#89B4C7")) +
+  ylab("Temperature (°C)")+
+  plottheme+
+  guides(alpha = FALSE, fill = FALSE, colour = FALSE)+
+  facet_grid(Unit ~.)+
+  theme(strip.text.x = element_blank(),
+        strip.text.y = element_blank(),
+        strip.background = element_blank())+
+  geom_hline(data = filter(meanline,Species == "Atlantic puffin"), aes(yintercept = mean), linetype = "dashed")+
+  theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  scale_y_continuous(breaks=seq(12,25,4))
+
+
+## Leach's storm-petrels
+violin_LSSP<- ggplot()+
+  geom_violin(data = LSSP, 
+              aes(x = reorder(Burrow, -mean), 
+                  y = Temperature, 
+                  fill = Unit, colour = Unit))+
+  scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
+  scale_colour_manual(values = c( "#E16E08","#F9E07F","#89B4C7")) +
+  xlab("Burrow ID") + ylab("Temperature (°C)")+
+  plottheme+
+  guides(alpha = FALSE, fill = FALSE, colour = FALSE)+
+  facet_grid(Unit ~.)+
+  theme(strip.text.x = element_blank(),
+        strip.text.y = element_blank(),
+        strip.background = element_blank())+
+  geom_hline(data = filter(meanline,Species == "Leach's storm-petrel"), aes(yintercept = mean), linetype = "dashed")+
+   theme(axis.title.x = element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+
+
+
+## Combine the plots
+library(patchwork)
+
+(violin_ATPU + puffin_box + plot_layout(widths=c(2,0.25))) / (violin_LSSP + petrel_box + plot_layout(widths=c(2,0.25))) 
+
+## Save plot
+ggsave("burrow_boxplots.png", 
+       width = 300, height = 250, unit = "mm")
+
+```
 
 
 
