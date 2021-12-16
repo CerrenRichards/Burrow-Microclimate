@@ -1909,33 +1909,30 @@ Run a change point analysis with package `changepoint` which finds changes in me
 
 library(changepoint)
 
-
-x=c(rnorm(100,0,1),rnorm(100,0,10))
-ansvar=cpt.var(x)
-plot(ansvar)
-print(ansvar)
-
-
-y=c(rnorm(100,0,1),rnorm(100,5,1))
-ansmean=cpt.mean(y)
-plot(ansmean,cpt.col='blue')
-print(ansmean)
-
-z=c(rnorm(100,0,1),rnorm(100,2,10))
-ansmeanvar=cpt.meanvar(z)
-plot(ansmeanvar,cpt.width=3)
-print(ansmeanvar)
-
-
 # Atlantic puffin burrows
 # Here we will identify changepoints in the internal puffin burrow data based on
 # the changes in the mean and variance of each burrow
 
+puffin <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin" & urrow)
+petrel <- filter(ATPU_LSSP, Location == "Inside" & Species == "Leach's storm-petrel")
+
+# Create a new dataframe for the changepoint data to be placed in
 
 x <- filter(ATPU_LSSP, Location == "Inside" & Burrow == "17")
-x1 <- cpt.meanvar(x$temp)
+x <- filter(ATPU_LSSP, Location == "Inside" & Burrow == "128")
+
+x1 <- cpt.meanvar(x$temp, method = "BinSeg", Q=3)
+x1 <- cpt.var(x$temp, method = "BinSeg", Q=3)
 plot(x1)
 print(x1)
+
+
+x <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin" & Burrow == "17") 
+
+x1 <- cpt.meanvar(x$temp, method = "BinSeg", Q=3)
+
+for(i in unique(a))
+
 
 #puffin = meanvar
 # petrel = var
@@ -1946,10 +1943,14 @@ cpt <- cpts(x1)
 # Identify the date and time of the changepoint
 Date <- x$Date[cpts(x1)]
 datetime <- x$datetime[cpts(x1)]
+
+burrow <- x$Burrow
+
+petrelcpt <- data.frame(burrow, cpt, Date, datetime)
   
 
 
-
+x$Date[cpts(x1)]
 
   
 ```
