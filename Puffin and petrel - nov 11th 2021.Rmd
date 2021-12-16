@@ -1685,7 +1685,7 @@ temp <- ggplot(data = weather1, aes(x = DateTime, y = Temperature))+
 
 
 
-heat <- ggplot(weather1, aes(x = Date, y = Time, fill = Temperature)) +
+heat <- ggplot(weather2, aes(x = Date, y = Time, fill = Temperature)) +
   theme_bw(base_size = 15)+
   theme(panel.grid.major = element_blank(), # remove the major lines
         panel.grid.minor = element_blank())+
@@ -1898,6 +1898,62 @@ sd.circular(LSSP$orient.rad)
 rad2deg(1.222865) ## = 70.07
 
 ```
+
+
+
+## CHANGE POINT ANALYSIS
+
+Run a change point analysis with package `changepoint` which finds changes in mean/variance of the internal burrow temperature to identify whether there was a significant change when the extreme seasonal events hit. 
+
+```{r}
+
+library(changepoint)
+
+
+x=c(rnorm(100,0,1),rnorm(100,0,10))
+ansvar=cpt.var(x)
+plot(ansvar)
+print(ansvar)
+
+
+y=c(rnorm(100,0,1),rnorm(100,5,1))
+ansmean=cpt.mean(y)
+plot(ansmean,cpt.col='blue')
+print(ansmean)
+
+z=c(rnorm(100,0,1),rnorm(100,2,10))
+ansmeanvar=cpt.meanvar(z)
+plot(ansmeanvar,cpt.width=3)
+print(ansmeanvar)
+
+
+# Atlantic puffin burrows
+# Here we will identify changepoints in the internal puffin burrow data based on
+# the changes in the mean and variance of each burrow
+
+
+x <- filter(ATPU_LSSP, Location == "Inside" & Burrow == "17")
+x1 <- cpt.meanvar(x$temp)
+plot(x1)
+print(x1)
+
+#puffin = meanvar
+# petrel = var
+
+# Identify the change points
+cpt <- cpts(x1)
+
+# Identify the date and time of the changepoint
+Date <- x$Date[cpts(x1)]
+datetime <- x$datetime[cpts(x1)]
+  
+
+
+
+
+  
+```
+
 
 
 
