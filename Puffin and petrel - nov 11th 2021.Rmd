@@ -1948,12 +1948,32 @@ Date[i] <- x$Date[cpts(x1)]
 }
 
 # Create the dataframe containing all the infomation
-petrelcpt <- data.frame(burrow, cpt, Date) %>% arrange(cpt)
+petrelcpt <- data.frame(burrow, cpt,cpt3, Date) %>% arrange(cpt)
 
 
 
 
-cpts(cpt.meanvar(x$temp), method = "BinSeg", Q=3)[3]
+# Create empty spaces for results to be pasted
+Date = Date()
+burrow = cpt = cpt3 =numeric()
+
+# Run the loop
+for(i in unique(puffin$Burrow)){
+  
+# Filter the data to select 
+x <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin" & Burrow == i) 
+
+# Run the changepoint analysis
+x1 <- cpt.meanvar(x$temp)
+
+# Identify the change points
+cpt[i] <- cpts(x1)
+cpt3[i] <- cpts(cpt.meanvar(x$temp, method = "BinSeg", Q=3))[3]
+burrow[i] <- i
+Date[i] <- x$Date[cpts(x1)]
+}
+
+
 
 
 
