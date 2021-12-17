@@ -1954,8 +1954,8 @@ petrelcpt <- data.frame(burrow, cpt,cpt3, Date) %>% arrange(cpt)
 
 
 # Create empty spaces for results to be pasted
-Date = Date()
-burrow = cpt = cpt3 =numeric()
+Date1 = Date2 = Date()
+burrow = cpt1 = cpt2 =numeric()
 
 # Run the loop
 for(i in unique(puffin$Burrow)){
@@ -1964,15 +1964,18 @@ for(i in unique(puffin$Burrow)){
 x <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin" & Burrow == i) 
 
 # Run the changepoint analysis
-x1 <- cpt.meanvar(x$temp)
+#x1 <- cpt.meanvar(x$temp)
 
 # Identify the change points
-cpt[i] <- cpts(x1)
-cpt3[i] <- cpts(cpt.meanvar(x$temp, method = "BinSeg", Q=3))[3]
+cpt1[i] <- cpts(cpt.meanvar(x$temp, method = "BinSeg", Q=2))[1]
+cpt2[i] <- cpts(cpt.meanvar(x$temp, method = "BinSeg", Q=2))[2]
 burrow[i] <- i
-Date[i] <- x$Date[cpts(x1)]
+Date1[i] <- x$Date[cpt1[i]]
+Date2[i] <- x$Date[cpt2[i]]
 }
 
+# Create the dataframe containing all the infomation
+petrelcpt <- data.frame(burrow, cpt1,cpt2, Date1, Date2) %>% arrange(cpt1)
 
 
 
