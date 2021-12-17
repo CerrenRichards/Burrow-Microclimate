@@ -1927,32 +1927,10 @@ plot(x1)
 print(x1)
 
 
+# We're taking the longer route around here in our loop because
+# I couldn't work out the shorter way...
 
-# Create empty spaces for results to be pasted
-Date = Date()
-burrow = cpt = numeric()
-
-# Run the loop
-for(i in unique(puffin$Burrow)){
-  
-# Filter the data to select 
-x <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin" & Burrow == i) 
-
-# Run the changepoint analysis
-x1 <- cpt.meanvar(x$temp)
-
-# Identify the change points
-cpt[i] <- cpts(x1)
-burrow[i] <- i
-Date[i] <- x$Date[cpts(x1)]
-}
-
-# Create the dataframe containing all the infomation
-petrelcpt <- data.frame(burrow, cpt,cpt3, Date) %>% arrange(cpt)
-
-
-
-
+# PUFFIN
 # Create empty spaces for results to be pasted
 Date1 = Date2 = Date()
 burrow = cpt1 = cpt2 =numeric()
@@ -1970,20 +1948,24 @@ x <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin" & Bur
 cpt1[i] <- cpts(cpt.meanvar(x$temp, method = "BinSeg", Q=2))[1]
 cpt2[i] <- cpts(cpt.meanvar(x$temp, method = "BinSeg", Q=2))[2]
 burrow[i] <- i
-Date1[i] <- x$Date[cpt1[i]]
-Date2[i] <- x$Date[cpt2[i]]
 }
 
 # Create the dataframe containing all the infomation
-petrelcpt <- data.frame(burrow, cpt1,cpt2, Date1, Date2) %>% arrange(cpt1)
+petrelcpt <- data.frame(burrow, cpt1, cpt2) %>% arrange(cpt1)
+
+# Delete the NA rows
+petrelcpt <- petrelcpt %>% drop_na()
+
+# Gather the changepoint data
+petrelcpt <- petrelcpt %>% gather(order, cpt, cpt1:cpt2)
+
+# Find the dates
+petrelcpt$Date <- x$Date[petrelcpt$cpt]
 
 
 
 
-#for(i in 1:nrow(puffin)){
-
-
-
+#Date2[i] <- x$Date[cpt2[i]]
 #puffin = meanvar
 # petrel = var
 
