@@ -1918,8 +1918,8 @@ petrel <- filter(ATPU_LSSP, Location == "Inside" & Species == "Leach's storm-pet
 
 # Create a new dataframe for the changepoint data to be placed in
 
-x <- filter(ATPU_LSSP, Location == "Inside" & Burrow == "17")
-x <- filter(ATPU_LSSP, Location == "Inside" & Burrow == "128")
+x <- filter(ATPU_LSSP, Location == "Inside"& Species == "Atlantic puffin" & Burrow == "37")
+x <- filter(ATPU_LSSP, Location == "Inside" & Burrow == "81" & Species == "Leach's storm-petrel")
 
 x1 <- cpt.meanvar(x$temp, method = "BinSeg", Q=3)
 x1 <- cpt.var(x$temp, method = "BinSeg", Q=3)
@@ -1932,8 +1932,7 @@ print(x1)
 
 # PUFFIN
 # Create empty spaces for results to be pasted
-Date1 = Date2 = Date()
-burrow = cpt1 = cpt2 =numeric()
+burrow = cpt1 = cpt2 = numeric()
 
 # Run the loop
 for(i in unique(puffin$Burrow)){
@@ -1951,25 +1950,82 @@ burrow[i] <- i
 }
 
 # Create the dataframe containing all the infomation
-petrelcpt <- data.frame(burrow, cpt1, cpt2) %>% arrange(cpt1)
+puffincpt <- data.frame(burrow, cpt1, cpt2) %>% arrange(cpt1)
+
+# Delete the NA rows
+puffincpt <- puffincpt %>% drop_na()
+
+# Gather the changepoint data
+puffincpt <- puffincpt %>% gather(order, cpt, cpt1:cpt2)
+
+# Find the dates
+puffincpt$Date <- x$Date[puffincpt$cpt]
+
+# Identify how many of the burrows fall within the range of the heat extremes
+
+# 04/08/2021 - 08/08/2021 - heat extreme 1 range
+# 14/08/2021 - heat extreme 1 beginning
+
+# 21/24 burrows 
+cptsummary <- puffincpt %>% filter(Date >= "2021-08-04") %>% 
+  filter(Date <= "2021-08-08") %>% distinct(burrow, .keep_all = TRUE)
+
+
+
+
+
+# PETREL
+# Create empty spaces for results to be pasted
+burrow = cpt1 = cpt2 = cpt3 = numeric()
+
+# Run the loop
+for(i in unique(petrel$Burrow)){
+  
+# Filter the data to select 
+x <- filter(ATPU_LSSP, Location == "Inside" & 
+              Species == "Leach's storm-petrel" & Burrow == i) 
+
+# Run the changepoint analysis
+#x1 <- cpt.meanvar(x$temp)
+
+# Identify the change points
+cpt1[i] <- cpts(cpt.var(x$temp, method = "BinSeg", Q=3))[1]
+cpt2[i] <- cpts(cpt.var(x$temp, method = "BinSeg", Q=3))[2]
+cpt3[i] <- cpts(cpt.var(x$temp, method = "BinSeg", Q=3))[3]
+burrow[i] <- i
+}
+
+# Create the dataframe containing all the infomation
+petrelcpt <- data.frame(burrow, cpt1, cpt2, cpt3) %>% arrange(cpt1)
 
 # Delete the NA rows
 petrelcpt <- petrelcpt %>% drop_na()
 
 # Gather the changepoint data
-petrelcpt <- petrelcpt %>% gather(order, cpt, cpt1:cpt2)
+petrelcpt <- petrelcpt %>% gather(order, cpt, cpt1:cpt3)
 
 # Find the dates
 petrelcpt$Date <- x$Date[petrelcpt$cpt]
 
+# Identify how many of the burrows fall within the range of the heat extremes
+
+# 04/08/2021 - 08/08/2021 - heat extreme 1 range
+# 14/08/2021 - 19/08/2021 - heat extreme 1 beginning
+# 11/09/2021 - Hurricane Larry
+# 20/09/2021 - 21/09/2021 - Cyclone Odette
+
+# 26/30 burrows 
+cptsummary <- petrelcpt %>% filter(Date >= "2021-09-20") %>% 
+  distinct(burrow, .keep_all = TRUE)
+
+cptsummary <- petrelcpt %>% filter(Date >= "2021-08-14") %>% 
+  filter(Date <= "2021-08-19") %>% distinct(burrow, .keep_all = TRUE)
 
 
 
-#Date2[i] <- x$Date[cpt2[i]]
-#puffin = meanvar
-# petrel = var
-
+cptsummary <- petrelcpt %>% group_by(Date) %>% summarise(n = n())
   
+
 ```
 
 
