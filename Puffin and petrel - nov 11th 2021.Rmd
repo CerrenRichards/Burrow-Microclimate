@@ -1909,50 +1909,44 @@ Run a change point analysis with package `changepoint` which finds changes in me
 
 library(changepoint)
 
+# Filter the data
+puffin <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin")
+petrel <- filter(ATPU_LSSP, Location == "Inside" & Species == "Leach's storm-petrel")
+
 # Atlantic puffin burrows
 # Here we will identify changepoints in the internal puffin burrow data based on
 # the changes in the mean and variance of each burrow
 
-puffin <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin")
-petrel <- filter(ATPU_LSSP, Location == "Inside" & Species == "Leach's storm-petrel")
-
-# Create a new dataframe for the changepoint data to be placed in
-
-x <- filter(ATPU_LSSP, Location == "Inside"& Species == "Atlantic puffin" & Burrow == "37")
-x <- filter(ATPU_LSSP, Location == "Inside" & Burrow == "81" & Species == "Leach's storm-petrel")
-
-x1 <- cpt.meanvar(x$temp, method = "BinSeg", Q=3)
-x1 <- cpt.var(x$temp, method = "BinSeg", Q=3)
-plot(x1)
-print(x1)
-
+# Create empty spaces for results to be pasted
+burrow = cpt1 = cpt2 = numeric()
 
 # We're taking the longer route around here in our loop because
 # I couldn't work out the shorter way...
 
-# PUFFIN
-# Create empty spaces for results to be pasted
-burrow = cpt1 = cpt2 = numeric()
-
 # Run the loop
+# Identify the individual puffin burrows (n = 24)
 for(i in unique(puffin$Burrow)){
   
 # Filter the data to select 
 x <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin" & Burrow == i) 
 
-# Run the changepoint analysis
-#x1 <- cpt.meanvar(x$temp)
-
 # Identify the change points
+# For some reason it doesn't allow the two to be pasted under one another
+# So here we just make two columns and will join them later
 cpt1[i] <- cpts(cpt.meanvar(x$temp, method = "BinSeg", Q=2))[1]
 cpt2[i] <- cpts(cpt.meanvar(x$temp, method = "BinSeg", Q=2))[2]
+
+# Assign the burrow number
 burrow[i] <- i
 }
 
-# Create the dataframe containing all the infomation
+# Create the dataframe containing all the information
 puffincpt <- data.frame(burrow, cpt1, cpt2) %>% arrange(cpt1)
 
 # Delete the NA rows
+# I think the function is assigning the changepoints to the rows based on the burrow numbers
+# So making 43 rows because the max burrow number is 43
+# We will just remove the extra NA rows
 puffincpt <- puffincpt %>% drop_na()
 
 # Gather the changepoint data
@@ -1962,19 +1956,23 @@ puffincpt <- puffincpt %>% gather(order, cpt, cpt1:cpt2)
 puffincpt$Date <- x$Date[puffincpt$cpt]
 
 # Identify how many of the burrows fall within the range of the heat extremes
-
 # 04/08/2021 - 08/08/2021 - heat extreme 1 range
-# 14/08/2021 - heat extreme 1 beginning
+# 14/08/2021 - heat extreme 2 beginning
 
-# 21/24 burrows 
+# Heat extreme 1 = 21/24 burrows 
 cptsummary <- puffincpt %>% filter(Date >= "2021-08-04") %>% 
   filter(Date <= "2021-08-08") %>% distinct(burrow, .keep_all = TRUE)
 
-
+# Heat extreme 2 = 1/24 burrows 
+cptsummary <- puffincpt %>% filter(Date >= "2021-08-14") %>% 
+  distinct(burrow, .keep_all = TRUE)
 
 
 
 # PETREL
+# Run just based on variance rather than mean+var because it identifies 
+# the changepoints better for the petrel data
+
 # Create empty spaces for results to be pasted
 burrow = cpt1 = cpt2 = cpt3 = numeric()
 
@@ -1985,17 +1983,16 @@ for(i in unique(petrel$Burrow)){
 x <- filter(ATPU_LSSP, Location == "Inside" & 
               Species == "Leach's storm-petrel" & Burrow == i) 
 
-# Run the changepoint analysis
-#x1 <- cpt.meanvar(x$temp)
-
 # Identify the change points
 cpt1[i] <- cpts(cpt.var(x$temp, method = "BinSeg", Q=3))[1]
 cpt2[i] <- cpts(cpt.var(x$temp, method = "BinSeg", Q=3))[2]
 cpt3[i] <- cpts(cpt.var(x$temp, method = "BinSeg", Q=3))[3]
+
+# Assign burrow number
 burrow[i] <- i
 }
 
-# Create the dataframe containing all the infomation
+# Create the dataframe containing all the information
 petrelcpt <- data.frame(burrow, cpt1, cpt2, cpt3) %>% arrange(cpt1)
 
 # Delete the NA rows
@@ -2007,24 +2004,39 @@ petrelcpt <- petrelcpt %>% gather(order, cpt, cpt1:cpt3)
 # Find the dates
 petrelcpt$Date <- x$Date[petrelcpt$cpt]
 
+
 # Identify how many of the burrows fall within the range of the heat extremes
-
-# 04/08/2021 - 08/08/2021 - heat extreme 1 range
-# 14/08/2021 - 19/08/2021 - heat extreme 1 beginning
+# 14/08/2021 - 19/08/2021 - heat extreme 2 range
 # 11/09/2021 - Hurricane Larry
-# 20/09/2021 - 21/09/2021 - Cyclone Odette
+# 20/09/2021 - 21/09/2021 - Cyclone Odette range
 
-# 26/30 burrows 
-cptsummary <- petrelcpt %>% filter(Date >= "2021-09-20") %>% 
-  distinct(burrow, .keep_all = TRUE)
-
+# Heat extreme 2 = 20/30 burrows
 cptsummary <- petrelcpt %>% filter(Date >= "2021-08-14") %>% 
   filter(Date <= "2021-08-19") %>% distinct(burrow, .keep_all = TRUE)
 
+# Larry = 2/30
+cptsummary <- petrelcpt %>% filter(Date == "2021-09-11") %>% 
+  distinct(burrow, .keep_all = TRUE)
+
+# Odette = 26/30 burrows 
+cptsummary <- petrelcpt %>% filter(Date >= "2021-09-20") %>% 
+  distinct(burrow, .keep_all = TRUE)
 
 
-cptsummary <- petrelcpt %>% group_by(Date) %>% summarise(n = n())
-  
+
+## Can use the code below to look at specific patterns within individual burrows
+# Just change the burrow number to look at specific burrows
+
+x <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin" & Burrow == "37")
+x1 <- cpt.meanvar(x$temp, method = "BinSeg", Q=2)
+plot(x1)
+print(x1)
+
+x <- filter(ATPU_LSSP, Location == "Inside" & Burrow == "81" & Species == "Leach's storm-petrel")
+x1 <- cpt.var(x$temp, method = "BinSeg", Q=3)
+plot(x1)
+print(x1)
+
 
 ```
 
