@@ -578,6 +578,33 @@ maxmin_season$Location <- factor(maxmin_season$Location, levels=c("Outside", "Ai
 
 
 
+ggplot(data = filter(maxmin_season, Location %in% c("Air", "Inside")), 
+       aes(x = Time, y = Mean, group = Location))+
+  geom_line(aes(colour = Location, linetype = Location))+
+  geom_ribbon(aes(ymin=Mean-sd, ymax=Mean+sd, fill = Location), alpha = 0.35)+
+  xlab("Time of Day (h)") + ylab("Temperature (°C)")+
+  scale_x_continuous(breaks=seq(0,23,4))+
+  plottheme+
+  theme(legend.title = element_blank())+ 
+  scale_colour_manual(values = c( "#80DEEA","#4E342E"))+
+  scale_fill_manual(values = c("#80DEEA","#4E342E"))+
+  theme(legend.position = c(0.9, 0.8))+
+  facet_wrap(~Species, scales = "free_x")+
+  theme(strip.text.x = element_blank(), 
+        strip.background = element_blank())
+
+
+
+
+
+
+
+
+
+
+
+
+
 ggplot(data = maxmin_season, aes(x = Time, y = Mean, group = Location))+
   geom_ribbon(aes(ymin=Mean-sd, ymax=Mean+sd, fill = Location), alpha = 0.35)+
   geom_line(aes(colour = Location, linetype = Location),  size = 1.5)+
@@ -2039,7 +2066,6 @@ print(x1)
 
 
 ```
-
 
 
 
