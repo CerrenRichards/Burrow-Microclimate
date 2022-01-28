@@ -180,7 +180,7 @@ model_df<- ATPU_LSSP %>%
   spread(key = Location, value = temp)
 
 # Select the columns that we want to join to the model_df
-burrows <- burrows %>% select(Species, Burrow, Elevation:Enterance_Area)
+burrows <- burrows %>% select(Species, Burrow, Elevation:Enterance_Area, Distance_from_shore)
 
 # Join the burrow feature data to the model_df dataframe
 model_df <- left_join(model_df, burrows)
@@ -352,9 +352,39 @@ hist(weather$Temperature)
 library(mgcv)
 
 
-m2 <- gamm(data = lssp,
+m1 <- gamm(data = lssp,
            buffer_kestrel~s(Enterance_Area) + s(Height) + s(Width) + s(Depth),
            random = list(Burrow = ~1))
+
+m1 <- gamm(data = lssp,
+           buffer_kestrel~s(Enterance_Area) + s(volume),
+           random = list(Burrow = ~1))
+
+m2 <- gamm(data = model_df_short,
+           buffer_kestrel~s(Enterance_Area) + s(volume),
+           random = list(Burrow = ~1))
+
+
+m3 <- gamm(data = atpu,
+           Inside~s(Temperature)+ s(Enterance_Area) + s(volume) +s(Time),
+           random = list(Burrow = ~1))
+
+hist(resid(m3$gam))
+plot(m3$gam)
+
+summary(m3$gam)
+
+
+ggplot(data = model_df_short, aes(x = Plot, y = Inside))+
+  geom_boxplot()+
+  plottheme
+
+
+plot(atpu$Wind.Chill, atpu$Inside)
+
+plot(model_df_short$volume, model_df_short$Inside)
+
+plot(model_df_short$Enterance_Area, model_df_short$buffer_kestrel)
 
 ```
 
@@ -379,9 +409,6 @@ Eight modelling steps from Zurr et al. (2010) "A protocol for data exploration t
 ```{r}
 
 
-
-
-
 # Look for multicolinearity 
 
 library(GGally)
@@ -400,6 +427,13 @@ pairs(model_df_short[,c(7,8,9,12:18, 21, 24)], pch = 19, lower.panel = NULL)
 library(psych)
 pairs.panels(model_df_short[,c(7,8,9,12:18, 21, 24)],
              method = "pearson")
+
+
+
+
+
+
+
 ```
 
 
