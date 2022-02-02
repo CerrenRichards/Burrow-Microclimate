@@ -180,7 +180,7 @@ model_df<- ATPU_LSSP %>%
   spread(key = Location, value = temp)
 
 # Select the columns that we want to join to the model_df
-burrows <- burrows %>% select(Species, Burrow, Elevation:Enterance_Area, Distance_from_shore)
+burrows <- burrows %>% select(Species, Burrow, Elevation:Proportion_fern)
 
 # Join the burrow feature data to the model_df dataframe
 model_df <- left_join(model_df, burrows)
@@ -324,6 +324,9 @@ ggplot(data = model_df_short, aes(x = Species, y = volume))+
   plottheme
 
 
+## Save the file for modelling
+write.csv(model_df_short, "model_df_short.csv")
+
 
 # Filter the dataframe for the different species
 # because separate models will be run for the species
@@ -380,7 +383,9 @@ ggplot(data = model_df_short, aes(x = Plot, y = Inside))+
   plottheme
 
 
-plot(atpu$Wind.Chill, atpu$Inside)
+plot(lssp$Canopy,    lssp$Inside)
+plot(lssp$Ground_cover,    lssp$Inside)
+plot(lssp$Proportion_fern, lssp$Inside)
 
 plot(model_df_short$volume, model_df_short$Inside)
 
