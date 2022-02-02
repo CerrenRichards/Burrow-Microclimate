@@ -327,6 +327,13 @@ ggplot(data = model_df_short, aes(x = Species, y = volume))+
 ## Save the file for modelling
 write.csv(model_df_short, "model_df_short.csv")
 
+## Set the date as Julian Days
+# model_df_short$Date <- as.Date(model_df_short$Date)
+model_df_short$julian <- format(model_df_short$Date, "%j")
+
+# Julian date is currently categorical. We will set as numeric
+model_df_short$julian <- as.numeric(model_df_short$julian)
+
 
 # Filter the dataframe for the different species
 # because separate models will be run for the species
@@ -383,13 +390,125 @@ ggplot(data = model_df_short, aes(x = Plot, y = Inside))+
   plottheme
 
 
-plot(lssp$Canopy,    lssp$Inside)
-plot(lssp$Ground_cover,    lssp$Inside)
-plot(lssp$Proportion_fern, lssp$Inside)
+plot(lssp$Canopy,    lssp$buffer_logger)
+plot(lssp$Ground_cover,    lssp$buffer_kestrel)
+plot(lssp$Proportion_fern, lssp$buffer_logger)
+
+plot(atpu$Wind.Speed, atpu$Inside)
+
+plot(lssp$Barometric.Pressure, lssp$Temperature)
 
 plot(model_df_short$volume, model_df_short$Inside)
 
 plot(model_df_short$Enterance_Area, model_df_short$buffer_kestrel)
+
+
+
+## Build first model
+## PREDICTORS OF BURROW MICROCLIMATE
+library(mgcv)
+
+# Petrel
+
+m1 <- gamm(data = lssp,
+           Inside~s(Temperature) + s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Canopy) + s(Ground_cover) + # Habitat
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m1$gam))
+plot(m1$gam)
+summary(m1$gam)
+
+
+## Puffin 
+m2 <- gamm(data = atpu,
+           Inside~s(Temperature) + s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m2$gam))
+plot(m2$gam)
+summary(m2$gam)
+
+
+
+## PREDICTORS OF BURROW BUFFERING CAPACITY
+
+# Petrel (WEATHER STATION BUFFER)
+m3 <- gamm(data = lssp,
+           buffer_kestrel~ s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Canopy) + s(Ground_cover) + # Habitat
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m3$gam))
+plot(m3$gam)
+summary(m3$gam)
+
+
+# Petrel (LOGGER BUFFER)
+m4 <- gamm(data = lssp,
+           buffer_logger~s(Temperature) + s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Canopy) + s(Ground_cover) + # Habitat
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m4$gam))
+plot(m4$gam)
+summary(m4$gam)
+
+
+
+# Puffin (WEATHER STATION BUFFER)
+m5 <- gamm(data = atpu,
+           buffer_kestrel~ s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m5$gam))
+plot(m5$gam)
+summary(m5$gam)
+
+
+# Petrel (LOGGER BUFFER)
+m6 <- gamm(data = atpu,
+           buffer_logger~s(Temperature) + s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m6$gam))
+plot(m6$gam)
+summary(m6$gam)
+
+
+
+
+m7 <- gamm(data = lssp,
+           Inside~s(Temperature) + s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(Height) + s(Width) + s(Depth)+ # Burrow features
+                  s(Canopy) + s(Ground_cover) + # Habitat
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+
+hist(resid(m7$gam))
+plot(m7$gam)
+summary(m7$gam)
+
+
+
+## Interaction between canopy cover and total ground cover?
+## Add the logger depth as a random effect?
+## Height, Width, Depth or just Volume?
+
+
 
 ```
 
