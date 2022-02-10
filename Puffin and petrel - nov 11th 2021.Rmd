@@ -411,27 +411,76 @@ library(mgcv)
 # Petrel
 
 m1 <- gamm(data = lssp,
-           Inside~s(Temperature) + s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
-                  s(Canopy) + s(Ground_cover) + # Habitat
-                  s(Time) + s(julian), # Time and date
+           Inside~s(scale(Temperature)) + s(scale(Wind.Speed)) +  # Environment
+                  s(scale(Enterance_Area)) + s(scale(volume)) + # Burrow features
+                  s(scale(Canopy)) + s(scale(Ground_cover)) + # Habitat
+                  s(scale(Time)) + s(scale(julian)), # Time and date
            random = list(Burrow = ~1))
+
+
+m10 <- gamm(data = lssp,
+           Inside~s(scale(Temperature)) + s(scale(Wind.Speed)) +  # Environment
+                  s(scale(Time)) + s(scale(julian)), # Time and date
+           random = list(Burrow = ~1))
+
+
+m11 <- gamm(data = lssp,
+           Inside~scale(Temperature) +
+                  s(scale(Time)) + s(scale(julian)), # Time and date
+           random = list(Burrow = ~1))
+
+
+m12 <- gamm(data = lssp,
+           Inside~s(scale(Time)) + s(scale(julian)), # Time and date
+           random = list(Burrow = ~1))
+
+
+# take resid of m12 - which are under or over preforming relative to time and date
+#avg burrow response and which are deviating 
+
+summary(m11$gam)
+summary(m12$gam)
+
+plot(m10$gam)
+
+#r2 - the most predictive model - how much variance is explained 
+
+# what's different with the outliers? what's unique 
+
+m8 <- gam(data = mean,
+           mean_inside~ # Environment
+                  s(scale(Enterance_Area), k=4) + s(scale(volume), k=4) +
+            s(scale(Width), k=4) + s(scale(Height), k=4)+ s(scale(Depth), k=4)+# Burrow features
+                  s(scale(Canopy), k=4) + s(scale(Ground_cover), k=4 ))
+
+m9 <- gam(data = mean,
+           mean_inside~ # Environment
+                  s(scale(Canopy), k=4) + s(scale(Ground_cover), k=4 ))
+
+plot(m9)
+
+# depth important
+# Expand out the column heading 
+# intercept for each burrow
+
+#average temp for each burrow 
+
+mean <- lssp %>% group_by(Burrow) %>% summarise(mean_temp = mean(Temperature),
+                                                mean_out = mean(Outside),
+                                        mean_wind = mean(Wind.Speed),
+                                        mean_inside= mean(Inside))
+
+mean <- left_join(mean, burrows)
+
+mean <- filter(mean, Species == "LSSP" )
 
 hist(resid(m1$gam))
 plot(m1$gam)
 summary(m1$gam)
 
+plot(lssp$Temperature, lssp$Date)
 
-## Puffin 
-m2 <- gamm(data = atpu,
-           Inside~s(Temperature) + s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
-                  s(Time) + s(julian), # Time and date
-           random = list(Burrow = ~1))
 
-hist(resid(m2$gam))
-plot(m2$gam)
-summary(m2$gam)
 
 
 
@@ -448,6 +497,31 @@ m3 <- gamm(data = lssp,
 hist(resid(m3$gam))
 plot(m3$gam)
 summary(m3$gam)
+
+
+
+
+
+
+
+
+
+
+
+## Puffin 
+m2 <- gamm(data = atpu,
+           Inside~s(Temperature) + s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m2$gam))
+plot(m2$gam)
+summary(m2$gam)
+
+
+
+
 
 
 # Petrel (LOGGER BUFFER)
@@ -509,6 +583,12 @@ summary(m7$gam)
 ## Height, Width, Depth or just Volume?
 
 
+
+# directly compare effect size by scaling
+
+# do any of the burrows respond differently during the extreme events - was there anything different in the features for those burrows?
+
+#bs=cc
 
 ```
 
