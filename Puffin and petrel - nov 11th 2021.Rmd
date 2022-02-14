@@ -424,16 +424,26 @@ library(mgcv)
 # Petrel
 
 
-# no need for gamm
-# "ts" removes it from the model - like removing it from the model
-# time - important to define circular 
-# "day of year" not Julian
-# ?choose.k for info
-# use REML rather than the GCV default
-# when edf is 9, recommended to double the K
-# p-val test to see whether to change to k values
+# no need for gamm - can model with gam and include random effects like `s(Burrow, bs="re")`, where bs="re" indicates random effects
 
-# gam control - parallel
+# For the time spline, it's important to define it as circular with bs="cc"
+
+# When we were building the models, we we're individually removing the spline predictors, but using bs="ts", removes them for you within the model for you
+
+# We scaled the predictors in the model, but scaling them in the dataframe lets you compare whats happening to the raw data when you're scaling (it's fine to do either way though)
+
+# It's better to use method = REML, rather than the GCV default
+
+# You can run gam in parallel with gam control to make it go faster when you have lots of data 
+
+# The default number for k is 10, so in the model summary, when the edf is 9, it's recommended to double the k value. There are lots of methods to test for whether you need to change the k values. 
+
+# Post gam checks:
+# Dharma package for checking the model fit
+
+# pre gam checks:
+# vis.concurvity function in the dsm package (darker colours = bad) - like a multicolinearity check, but for squiggliness 
+
 
 m14 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + s(scale(Wind.Speed),bs="ts") +  # Environment
@@ -445,6 +455,16 @@ m14 <- gam(data = lssp,
 
 summary(m14)
 
+
+# "ts" removes it from the model - like removing it from the model
+# time - important to define circular 
+# "day of year" not Julian
+# ?choose.k for info
+# use REML rather than the GCV default
+# when edf is 9, recommended to double the K
+# p-val test to see whether to change to k values
+
+# gam control - parallel
 # GLMM faq - Ben Bolker
 # GLM - standard error that are too wide if overfitting
 # check out about overfitting
