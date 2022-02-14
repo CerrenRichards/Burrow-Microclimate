@@ -208,7 +208,7 @@ Format the weather data
 
 ```{r}
 
-setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Weather Data 2021/Edited")
+ssetwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Weather Data 2021/Edited")
 
 # Read in the weather data from the two kestrel weather meters
 weather1 <- read.csv("WEATHER_kestrel2581085.csv")
@@ -326,6 +326,9 @@ ggplot(data = model_df_short, aes(x = Species, y = volume))+
 
 ## Save the file for modelling
 write.csv(model_df_short, "model_df_short.csv")
+model_df_short <- read.csv("model_df_short.csv")
+
+model_df_short$Date <- as.Date(model_df_short$Date)
 
 ## Set the date as Julian Days
 # model_df_short$Date <- as.Date(model_df_short$Date)
@@ -334,11 +337,21 @@ model_df_short$julian <- format(model_df_short$Date, "%j")
 # Julian date is currently categorical. We will set as numeric
 model_df_short$julian <- as.numeric(model_df_short$julian)
 
+library(dplyr)
 
 # Filter the dataframe for the different species
 # because separate models will be run for the species
 lssp <- filter(model_df_short, Species == "Leach's storm-petrel")
 atpu <- filter(model_df_short, Species == "Atlantic puffin")
+
+# set burrow as factor
+lssp$Burrow <- factor(lssp$Burrow)
+
+# save a file so if it crashes
+#save(lssp, file = "lssp.Rdata")
+
+# load in
+load("lssp.Rdata")
 
 
 # Explore the data
@@ -410,12 +423,51 @@ library(mgcv)
 
 # Petrel
 
+
+# no need for gamm
+# "ts" removes it from the model - like removing it from the model
+# time - important to define circular 
+# "day of year" not Julian
+# ?choose.k for info
+# use REML rather than the GCV default
+# when edf is 9, recommended to double the K
+# p-val test to see whether to change to k values
+
+# gam control - parallel
+
+m14 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+summary(m14)
+
+# GLMM faq - Ben Bolker
+# GLM - standard error that are too wide if overfitting
+# check out about overfitting
+# post gam checks 
+# vif
+# model without the scale
+# Dharma
+# concurvity - mgcv library - 3 values - use the middle
+# vis.concurvity - dsm package - dark = bad
+
+
+
+
+
+
 m1 <- gamm(data = lssp,
            Inside~s(scale(Temperature)) + s(scale(Wind.Speed)) +  # Environment
                   s(scale(Enterance_Area)) + s(scale(volume)) + # Burrow features
                   s(scale(Canopy)) + s(scale(Ground_cover)) + # Habitat
                   s(scale(Time)) + s(scale(julian)), # Time and date
            random = list(Burrow = ~1))
+
+
 
 
 m10 <- gamm(data = lssp,
@@ -437,6 +489,40 @@ m12 <- gamm(data = lssp,
 
 # take resid of m12 - which are under or over preforming relative to time and date
 #avg burrow response and which are deviating 
+
+# Look at the residuals 
+lssp$residuals_lssp <- resid(m12$gam)
+
+# Make burrow a character
+lssp$ID <- as.character(lssp$Burrow)
+
+# Visualise the residuals between burrows
+library(ggplot2)
+ggplot(data = lssp, aes(x = ID, y = residuals))+
+  geom_boxplot()+
+  plottheme
+
+# Residual model
+m13 <- gamm(data = lssp,
+           residuals_lssp~s(scale(Temperature)) + s(scale(Wind.Speed))+ # Environment
+                   s(scale(Enterance_Area)) + s(scale(Height)) + # Burrow features
+                  s(scale(Canopy)) + s(scale(Ground_cover)), # Habitat 
+           random = list(Burrow = ~1))
+
+
+
+
+plot(lssp$Enterance_Area, lssp$residuals_lssp)
+plot(lssp$Height, lssp$residuals_lssp)
+plot(lssp$Width, lssp$residuals_lssp)
+plot(lssp$Depth, lssp$residuals_lssp)
+plot(lssp$volume, lssp$residuals_lssp)
+plot(lssp$Ground_cover, lssp$residuals_lssp)
+plot(lssp$Canopy, lssp$residuals_lssp)
+plot(lssp$Temperature, lssp$residuals_lssp)
+plot(lssp$Wind.Speed, lssp$residuals_lssp)
+
+
 
 summary(m11$gam)
 summary(m12$gam)
@@ -589,6 +675,7 @@ summary(m7$gam)
 # do any of the burrows respond differently during the extreme events - was there anything different in the features for those burrows?
 
 #bs=cc
+
 
 ```
 
