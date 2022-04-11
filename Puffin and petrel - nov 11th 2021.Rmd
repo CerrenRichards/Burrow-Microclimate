@@ -455,6 +455,7 @@ m14 <- gam(data = lssp,
 
 summary(m14)
 
+### LEFT HERE APRIL 11TH, 2O22
 
 # "ts" removes it from the model - like removing it from the model
 # time - important to define circular 
