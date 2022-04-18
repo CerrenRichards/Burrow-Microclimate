@@ -742,9 +742,14 @@ pairs.panels(model_df_short[,c(7,8,9,12:18, 21, 24)],
 
 
 
-
-
-
+## Building the model
+m14 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
 
 
 # Visualise concurvity of the model
@@ -752,11 +757,42 @@ library(dsm)
 vis.concurvity(m14)
 
 # Explore model fit with `DHARMa` package
+# https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html
 library(DHARMa); library(lme4); library(mgcViz)
-DHARMa::testDispersion(m14)
+
+# Visualise dispersion
+testDispersion(m14)
+
+# QQplot
+plotQQunif(m14)
+
+# Residuals
+plotResiduals(m14)
+
+# Test for zero inflation
+testZeroInflation(m14)
 
 hist(resid(m14))
 plot(m14)
+
+summary(m14)
+# edf is close to 9 for temperature and julian date, so we will double the knots to 20
+
+m15 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 20) + s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts", k = 20)+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+# Model checks
+testDispersion(m15)
+plotQQunif(m15)
+plotResiduals(m15)
+testZeroInflation(m15)
+hist(resid(m15))
+plot(m15)
 
 ```
 
