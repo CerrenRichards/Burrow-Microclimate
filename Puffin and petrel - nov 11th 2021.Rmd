@@ -208,7 +208,7 @@ Format the weather data
 
 ```{r}
 
-ssetwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Weather Data 2021/Edited")
+setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Weather Data 2021/Edited")
 
 # Read in the weather data from the two kestrel weather meters
 weather1 <- read.csv("WEATHER_kestrel2581085.csv")
@@ -746,6 +746,18 @@ pairs.panels(model_df_short[,c(7,8,9,12:18, 21, 24)],
 
 
 
+
+# Visualise concurvity of the model
+library(dsm)
+vis.concurvity(m14)
+
+# Explore model fit with `DHARMa` package
+library(DHARMa); library(lme4); library(mgcViz)
+DHARMa::testDispersion(m14)
+
+hist(resid(m14))
+plot(m14)
+
 ```
 
 
@@ -972,8 +984,8 @@ ggsave("avg_temp_plot.png",
        width = 200, height = 170, unit = "mm")
 
 
-## Save this plot to make the legend
-# We will manual move this legend and place it in the plot above with GIMP
+
+## ****** THIS IS THE FINAL PLOT ******
 ggplot(data = maxmin_season, aes(x = Time, y = Mean, group = Location))+
   geom_ribbon(aes(ymin=Mean-sd, ymax=Mean+sd, fill = Location), alpha = 0.35)+
   geom_line(aes(colour = Location, linetype = Location),  size = 1.25)+
@@ -989,7 +1001,7 @@ ggplot(data = maxmin_season, aes(x = Time, y = Mean, group = Location))+
         strip.background = element_rect(fill="black"))
 
 ggsave("avg_temp_plot_legend.png", 
-       width = 170, height = 170, unit = "mm")
+       width = 170, height = 100, unit = "mm")
 
 
 # Max/min plot 
@@ -1796,6 +1808,8 @@ extreme_puffin<- ggplot(filter(extreme, Species == "Atlantic puffin"),
     theme(strip.text.x = element_blank(), 
           strip.background = element_blank())
 
+
+
 # petrels
 extreme_petrel<- ggplot(filter(extreme, Species == "Leach's storm-petrel"),
                         aes(x = Extreme, y = buffer_kestrel)) +
@@ -1880,6 +1894,24 @@ ggsave("stacked_buffer_weather.png",
        dpi = 600, 
        width = 350, height = 150, unit = "mm")
 
+
+
+
+## STARTING TO EXPLORE THE BEST PERFORMING BUFFERING BURROWS
+# 4 models - extreme hot, cold, lssp and atpu
+## Identify the unique features of burrows that are under- and overperforming during extreme events. 
+
+extreme_heat_ATPU$Burrow <- as.character(extreme_heat_ATPU$Burrow)
+
+ggplot(extreme_heat_ATPU, aes(x = Burrow, y = buffer_kestrel)) +
+  geom_boxplot()+
+  ylab(bquote(T[Buffer]~"(°C)"))+ xlab("Burrow")+
+  geom_hline(yintercept = 0, linetype="dashed", size = 1)+
+    plottheme+
+  theme(legend.position = "none")+
+  facet_wrap(~Species)+
+    theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
 
 ```
 
