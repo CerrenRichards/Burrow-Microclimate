@@ -735,6 +735,9 @@ pairs(model_df_short[,c(7,8,9,12:18, 21, 24)], pch = 19, lower.panel = NULL)
 library(psych)
 pairs.panels(model_df_short[,c(7,8,9,12:18, 21, 24)],
              method = "pearson")
+             
+             
+## MODEL - Predict drivers of burrow microclimate
 
 ```{r}
 
@@ -815,7 +818,9 @@ hist(resid(m1_puffin))
 plot(m1_puffin)
 summary(m1_puffin)
 
-# edf is close to 9 for temperature, entrance area, volume and julian date, so we will double the knots to 20
+
+# edf is close to 9 for temperature, entrance area, volume and julian date
+# so we will double the knots to 20
 m2_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts", k = 20) + # Environment
                   s(scale(Wind.Speed),bs="ts") +  # Environment
@@ -826,6 +831,7 @@ m2_puffin <- gam(data = atpu,
                   method = "REML") 
 
 
+# model checks
 AIC(m1_puffin, m2_puffin) # m2 reduces the AIC
 vis.concurvity(m2_puffin)
 plot(m2_puffin)
@@ -833,7 +839,38 @@ summary(m2_puffin)
 
 ```
 
+## MODEL - Predict drivers of burrow buffering capacity
 
+```{r}
+## PETREL
+
+# Build initial model
+m1_buff <- gam(data = lssp,
+           buffer_kestrel~s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+summary(m1_buff)
+hist(resid(m1_buff))
+plot(m1_buff)
+plotQQunif(m1_buff)
+
+
+m2_buff <- gam(data = lssp,
+           buffer_kestrel~s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts", k = 20)+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+vis.concurvity(m2_buff)
+summary(m2_buff)
+
+```
 
 
 
