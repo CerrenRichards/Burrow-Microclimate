@@ -718,8 +718,6 @@ Eight modelling steps from Zurr et al. (2010) "A protocol for data exploration t
 8. Are observations of the response variable independent?
 
 
-```{r}
-
 
 # Look for multicolinearity 
 
@@ -734,15 +732,16 @@ ggpairs(filter(model_df_short, Species == "Leach's storm-petrel"),
 
 pairs(model_df_short[,c(7,8,9,12:18, 21, 24)], pch = 19, lower.panel = NULL)
 
-
-
 library(psych)
 pairs.panels(model_df_short[,c(7,8,9,12:18, 21, 24)],
              method = "pearson")
 
+```{r}
 
+## Predict drivers of burrow microclimate
+## PETREL
 
-## Building the model
+# Build initial model
 m14 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + s(scale(Wind.Speed),bs="ts") +  # Environment
                   s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
@@ -776,6 +775,7 @@ hist(resid(m14))
 plot(m14)
 
 summary(m14)
+
 # edf is close to 9 for temperature and julian date, so we will double the knots to 20
 
 m15 <- gam(data = lssp,
@@ -787,12 +787,39 @@ m15 <- gam(data = lssp,
                   method = "REML") 
 
 # Model checks
+AIC(m14, m15) # m15 reduces the AIC 
 testDispersion(m15)
 plotQQunif(m15)
 plotResiduals(m15)
 testZeroInflation(m15)
 hist(resid(m15))
 plot(m15)
+
+
+
+## Predict drivers of burrow microclimate
+## PUFFIN
+
+m1_puffin <- gam(data = atpu,
+             Inside~s(scale(Temperature), bs="ts") + s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+plot(m2_puffin)
+
+summary(m2_puffin)
+plotQQunif(m1_puffin)
+plotResiduals(m1_puffin)
+
+testDispersion(m15)
+plotQQunif(m15)
+plotResiduals(m15)
+testZeroInflation(m15)
+hist(resid(m15))
+plot(m15)
+
 
 ```
 
