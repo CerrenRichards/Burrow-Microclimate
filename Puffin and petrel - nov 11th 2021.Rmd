@@ -774,9 +774,7 @@ testZeroInflation(m14)
 hist(resid(m14))
 plot(m14)
 
-summary(m14)
-
-# edf is close to 9 for temperature and julian date, so we will double the knots to 20
+summary(m14) # edf is close to 9 for temperature and julian date, so we will double the knots to 20
 
 m15 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 20) + s(scale(Wind.Speed),bs="ts") +  # Environment
@@ -807,19 +805,31 @@ m1_puffin <- gam(data = atpu,
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
-plot(m2_puffin)
-
-summary(m2_puffin)
+# Model checks
+vis.concurvity(m1_puffin)
 plotQQunif(m1_puffin)
 plotResiduals(m1_puffin)
+testDispersion(m1_puffin)
+testZeroInflation(m1_puffin)
+hist(resid(m1_puffin))
+plot(m1_puffin)
+summary(m1_puffin)
 
-testDispersion(m15)
-plotQQunif(m15)
-plotResiduals(m15)
-testZeroInflation(m15)
-hist(resid(m15))
-plot(m15)
+# edf is close to 9 for temperature, entrance area, volume and julian date, so we will double the knots to 20
+m2_puffin <- gam(data = atpu,
+             Inside~s(scale(Temperature), bs="ts", k = 20) + # Environment
+                  s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts", k = 20) + # Burrow features
+                  s(scale(volume),bs="ts", k = 20) + # Burrow features
+                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts", k = 20)+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
 
+
+AIC(m1_puffin, m2_puffin) # m2 reduces the AIC
+vis.concurvity(m2_puffin)
+plot(m2_puffin)
+summary(m2_puffin)
 
 ```
 
