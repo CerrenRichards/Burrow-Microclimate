@@ -758,9 +758,17 @@ m14 <- gam(data = lssp,
 library(dsm)
 vis.concurvity(m14)
 
+#concurvity(m14)
+
 # Explore model fit with `DHARMa` package
 # https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html
 library(DHARMa); library(lme4); library(mgcViz)
+
+# Visualise the VIF
+devtools::install_github("samclifford/mgcv.helper")
+library(mgcv.helper)
+
+mgcv.helper::vif.gam(m14) ## Errors here
 
 # Visualise dispersion
 testDispersion(m14)
@@ -795,11 +803,14 @@ plotResiduals(m15)
 testZeroInflation(m15)
 hist(resid(m15))
 plot(m15)
-
+summary(m15)
 
 
 ## Predict drivers of burrow microclimate
 ## PUFFIN
+
+# Define the burrow ID as a character 
+atpu$Burrow <- as.factor(atpu$Burrow)
 
 m1_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts") + s(scale(Wind.Speed),bs="ts") +  # Environment
@@ -873,6 +884,128 @@ summary(m2_buff)
 ```
 
 
+
+
+## MODEL - Overperforming burrows
+
+```{r}
+
+## Summarise the mean buffering temperatures per burrow
+
+## PUFFIN - HEAT EXTREME
+heat_ATPU <- extreme_heat_ATPU %>% group_by(Burrow) %>% 
+  summarise(Buffer = mean(buffer_kestrel),
+            Elevation = mean(Elevation),
+            Burrow.orientation = mean(Burrow.orientation),
+            Width = mean(Width),
+            Height = mean(Height),
+            Depth = mean(Depth),
+            Enterance_Area = mean(Enterance_Area))
+
+heat_ATPU$volume <- pi * (heat_ATPU$Width/2) * (heat_ATPU$Height/2) * heat_ATPU$Depth
+
+
+## PUFFIN - COLD EXTREME
+cold_ATPU <- extreme_cold_ATPU %>% group_by(Burrow) %>% 
+  summarise(Buffer = mean(buffer_kestrel),
+            Elevation = mean(Elevation),
+            Burrow.orientation = mean(Burrow.orientation),
+            Width = mean(Width),
+            Height = mean(Height),
+            Depth = mean(Depth),
+            Enterance_Area = mean(Enterance_Area))
+                                                                  
+cold_ATPU$volume <- pi * (cold_ATPU$Width/2) * (cold_ATPU$Height/2) * cold_ATPU$Depth
+
+
+## PETREL - COLD EXTREME
+cold_LSSP <- extreme_cold_LSSP %>% group_by(Burrow) %>% 
+  summarise(Buffer = mean(buffer_kestrel),
+            Elevation = mean(Elevation),
+            Burrow.orientation = mean(Burrow.orientation),
+            Width = mean(Width),
+            Height = mean(Height),
+            Depth = mean(Depth),
+            Enterance_Area = mean(Enterance_Area),
+            Canopy = mean(Canopy),
+            Ground_cover = mean(Ground_cover))
+                                                                  
+cold_LSSP$volume <- pi * (cold_LSSP$Width/2) * (cold_LSSP$Height/2) * cold_LSSP$Depth
+
+
+## PETREL - HEAT EXTREME
+heat_LSSP <- extreme_heat_LSSP %>% group_by(Burrow) %>% 
+  summarise(Buffer = mean(buffer_kestrel),
+            Elevation = mean(Elevation),
+            Burrow.orientation = mean(Burrow.orientation),
+            Width = mean(Width),
+            Height = mean(Height),
+            Depth = mean(Depth),
+            Enterance_Area = mean(Enterance_Area),
+            Canopy = mean(Canopy),
+            Ground_cover = mean(Ground_cover))
+                                                                  
+heat_LSSP$volume <- pi * (heat_LSSP$Width/2) * (heat_LSSP$Height/2) * heat_LSSP$Depth
+
+
+
+
+## STARTING TO EXPLORE THE BEST PERFORMING BUFFERING BURROWS
+# 4 models - extreme hot, cold, lssp and atpu
+## Identify the unique features of burrows that are under- and overperforming during extreme events. 
+
+extreme_heat_ATPU$Burrow <- as.character(extreme_heat_ATPU$Burrow)
+
+ggplot(heat_ATPU, aes(x = Width, y = Buffer)) +
+  geom_point()+
+  ylab(bquote(T[Buffer]~"(°C)"))+
+  #geom_hline(yintercept = 0, linetype="dashed", size = 1)+
+    plottheme+
+  theme(legend.position = "none")
+
+
+ggplot(heat_LSSP, aes(x = Height, y = Buffer)) +
+  geom_point()+
+  ylab(bquote(T[Buffer]~"(°C)"))+
+  #geom_hline(yintercept = 0, linetype="dashed", size = 1)+
+    plottheme+
+  theme(legend.position = "none")
+
+
+
+## Build Linear Models 
+
+## PUFFIN - HEAT EXTREME
+
+m1_heat_atpu <- lm(data = heat_ATPU, 
+                   Buffer ~ volume + Enterance_Area)
+
+summary(m1_heat_atpu)
+
+## PUFFIN - COLD EXTREME
+m1_cold_atpu <- lm(data = cold_ATPU, 
+                   Buffer ~ volume + Enterance_Area)
+
+summary(m1_cold_atpu)
+
+
+
+
+
+## PETREL - HEAT EXTREME
+
+m1_heat_lssp <- lm(data = heat_LSSP, 
+                   Buffer ~ Canopy + volume + Enterance_Area)
+
+summary(m1_heat_lssp)
+
+## PETREL - COLD EXTREME
+m1_cold_lssp <- lm(data = cold_LSSP, 
+                   Buffer ~  Height + Width + Depth + Enterance_Area + Canopy)
+
+summary(m1_cold_lssp)
+
+```
 
 
 
