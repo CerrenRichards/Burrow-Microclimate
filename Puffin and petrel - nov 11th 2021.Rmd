@@ -900,10 +900,12 @@ heat_ATPU <- extreme_heat_ATPU %>% group_by(Burrow) %>%
             Width = mean(Width),
             Height = mean(Height),
             Depth = mean(Depth),
-            Enterance_Area = mean(Enterance_Area))
+            Enterance_Area = mean(Enterance_Area),
+            Canopy = mean(Canopy),
+            Ground_cover = mean(Ground_cover))
 
 heat_ATPU$volume <- pi * (heat_ATPU$Width/2) * (heat_ATPU$Height/2) * heat_ATPU$Depth
-
+heat_ATPU$Species <- "ATPU"
 
 ## PUFFIN - COLD EXTREME
 cold_ATPU <- extreme_cold_ATPU %>% group_by(Burrow) %>% 
@@ -913,10 +915,12 @@ cold_ATPU <- extreme_cold_ATPU %>% group_by(Burrow) %>%
             Width = mean(Width),
             Height = mean(Height),
             Depth = mean(Depth),
-            Enterance_Area = mean(Enterance_Area))
+            Enterance_Area = mean(Enterance_Area),
+            Canopy = mean(Canopy),
+            Ground_cover = mean(Ground_cover))
                                                                   
 cold_ATPU$volume <- pi * (cold_ATPU$Width/2) * (cold_ATPU$Height/2) * cold_ATPU$Depth
-
+cold_ATPU$Species <- "ATPU"
 
 ## PETREL - COLD EXTREME
 cold_LSSP <- extreme_cold_LSSP %>% group_by(Burrow) %>% 
@@ -931,11 +935,12 @@ cold_LSSP <- extreme_cold_LSSP %>% group_by(Burrow) %>%
             Ground_cover = mean(Ground_cover))
                                                                   
 cold_LSSP$volume <- pi * (cold_LSSP$Width/2) * (cold_LSSP$Height/2) * cold_LSSP$Depth
-
+cold_LSSP$Species <- "LSSP"
 
 ## PETREL - HEAT EXTREME
 heat_LSSP <- extreme_heat_LSSP %>% group_by(Burrow) %>% 
   summarise(Buffer = mean(buffer_kestrel),
+            Buffer.med = median(buffer_kestrel),
             Elevation = mean(Elevation),
             Burrow.orientation = mean(Burrow.orientation),
             Width = mean(Width),
@@ -946,7 +951,21 @@ heat_LSSP <- extreme_heat_LSSP %>% group_by(Burrow) %>%
             Ground_cover = mean(Ground_cover))
                                                                   
 heat_LSSP$volume <- pi * (heat_LSSP$Width/2) * (heat_LSSP$Height/2) * heat_LSSP$Depth
+heat_LSSP$Species <- "LSSP"
 
+# Join the two species together
+heat_LSSP$Burrow <- as.character(heat_LSSP$Burrow)
+heat_ATOU$Burrow <- as.character(heat_ATPU$Burrow)
+cold_LSSP$Burrow <- as.character(cold_LSSP$Burrow)
+cold_ATPU$Burrow <- as.character(cold_ATPU$Burrow)
+
+heat <- bind_rows(heat_LSSP, heat_ATPU)
+cold <- bind_rows(cold_LSSP, cold_ATPU)
+
+# Drop rows of burrow with NA
+library(tidyverse)
+cold <- cold %>% drop_na()
+heat <- heat %>% drop_na(Width)
 
 
 
@@ -956,12 +975,7 @@ heat_LSSP$volume <- pi * (heat_LSSP$Width/2) * (heat_LSSP$Height/2) * heat_LSSP$
 
 extreme_heat_ATPU$Burrow <- as.character(extreme_heat_ATPU$Burrow)
 
-ggplot(heat_ATPU, aes(x = Width, y = Buffer)) +
-  geom_point()+
-  ylab(bquote(T[Buffer]~"(°C)"))+
-  #geom_hline(yintercept = 0, linetype="dashed", size = 1)+
-    plottheme+
-  theme(legend.position = "none")
+
 
 
 ggplot(heat_LSSP, aes(x = Height, y = Buffer)) +
@@ -1004,6 +1018,28 @@ m1_cold_lssp <- lm(data = cold_LSSP,
                    Buffer ~  Height + Width + Depth + Enterance_Area + Canopy)
 
 summary(m1_cold_lssp)
+
+
+
+## Heat model two species
+
+m1_heat <- lme(data = heat,
+              Buffer ~  volume + Enterance_Area + Canopy,
+              random = ~1|Species, method = "ML")
+
+summary(m1_heat)
+
+m2_heat <- lm(data = heat,
+              Buffer ~   Enterance_Area + volume)
+
+summary(m2_heat)
+
+ggplot(heat, aes(x = volume, y = Buffer, group = Species)) +
+  geom_point(aes(colour = Species))+
+  ylab(bquote(T[Buffer]~"(°C)"))+
+  #geom_hline(yintercept = 0, linetype="dashed", size = 1)+
+    plottheme
+  theme(legend.position = "none")
 
 ```
 
