@@ -787,13 +787,18 @@ plot(m14)
 
 summary(m14) # edf is close to 9 for temperature and julian date, so we will double the knots to 20
 
-m15 <- gam(data = lssp,
-           Inside~s(scale(Temperature), bs="ts", k = 20) + s(scale(Wind.Speed),bs="ts") +  # Environment
+m17 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 4) + s(scale(Wind.Speed),bs="ts", k = 4) +  # Environment
                   s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
-                  s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
-                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts", k = 20)+ # Time and date
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts", k = 6)+ # Time and date
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
+
+
+# polynomial (wind) or linear (temp)
+# lme 
+# pq = 5 for corarma
 
 # Model checks
 AIC(m14, m15) # m15 reduces the AIC 
@@ -801,9 +806,9 @@ testDispersion(m15)
 plotQQunif(m15)
 plotResiduals(m15)
 testZeroInflation(m15)
-hist(resid(m15))
-plot(m15)
-summary(m15)
+hist(resid(m17))
+plot(m17)
+summary(m17)
 
 
 ## Predict drivers of burrow microclimate
@@ -848,6 +853,9 @@ vis.concurvity(m2_puffin)
 plot(m2_puffin)
 summary(m2_puffin)
 
+
+
+# take out terms and see how things are explained
 ```
 
 ## MODEL - Predict drivers of burrow buffering capacity
@@ -863,6 +871,7 @@ m1_buff <- gam(data = lssp,
                   s(scale(Time), bs="cc") + s(scale(julian), bs="ts")+ # Time and date
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
+
 
 summary(m1_buff)
 hist(resid(m1_buff))
@@ -991,35 +1000,61 @@ ggplot(heat_LSSP, aes(x = Height, y = Buffer)) +
 
 ## PUFFIN - HEAT EXTREME
 
-m1_heat_atpu <- lm(data = heat_ATPU, 
+heat_ATPU <- heat_ATPU %>% drop_na()
+
+m1_heat_atpu <- gls(data = heat_ATPU, 
                    Buffer ~ volume + Enterance_Area)
 
 summary(m1_heat_atpu)
 
+hist(resid(m1_heat_atpu))
+
+hist(cold_ATPU$Buffer)
+
+
 ## PUFFIN - COLD EXTREME
-m1_cold_atpu <- lm(data = cold_ATPU, 
+
+cold_ATPU <- cold_ATPU %>% drop_na()
+
+m1_cold_atpu <- gls(data = cold_ATPU, 
                    Buffer ~ volume + Enterance_Area)
 
 summary(m1_cold_atpu)
 
 
 
-
-
 ## PETREL - HEAT EXTREME
 
-m1_heat_lssp <- lm(data = heat_LSSP, 
-                   Buffer ~ Canopy + volume + Enterance_Area)
+m1_heat_lssp <- gls(data = heat_LSSP, 
+                   Buffer ~ log(Canopy) + volume + log(Enterance_Area))
 
 summary(m1_heat_lssp)
 
+plot(m1_heat_lssp)
+
+
 ## PETREL - COLD EXTREME
-m1_cold_lssp <- lm(data = cold_LSSP, 
-                   Buffer ~  Height + Width + Depth + Enterance_Area + Canopy)
+m1_cold_lssp <- gls(data = cold_LSSP, 
+                   Buffer ~  Canopy + volume + Enterance_Area)
 
 summary(m1_cold_lssp)
 
 
+
+ggplot(heat_LSSP, aes(x = Canopy, y = Buffer)) +
+  geom_point()+
+  ylab(bquote(T[Buffer]~"(°C)"))+
+  #geom_hline(yintercept = 0, linetype="dashed", size = 1)+
+    plottheme
+
+
+
+```
+
+
+
+## Two models
+```{r}
 
 ## Heat model two species
 
@@ -1027,22 +1062,27 @@ m1_heat <- lme(data = heat,
               Buffer ~  volume + Enterance_Area + Canopy,
               random = ~1|Species, method = "ML")
 
+plot(m1_heat)
+hist(resid(m1_heat))
+vif(m1_heat)
+
 summary(m1_heat)
 
-m2_heat <- lm(data = heat,
-              Buffer ~   Enterance_Area + volume)
 
-summary(m2_heat)
+m1_cold <- lme(data = cold,
+              Buffer ~  volume + Enterance_Area + Canopy,
+              random = ~1|Species, method = "ML")
 
-ggplot(heat, aes(x = volume, y = Buffer, group = Species)) +
+
+summary(m1_cold)
+
+ggplot(heat, aes(x = Canopy, y = Buffer, group = Species)) +
   geom_point(aes(colour = Species))+
   ylab(bquote(T[Buffer]~"(°C)"))+
   #geom_hline(yintercept = 0, linetype="dashed", size = 1)+
     plottheme
   theme(legend.position = "none")
-
 ```
-
 
 
 ## Create seasonal temperature trend plot
