@@ -788,17 +788,39 @@ plot(m14)
 summary(m14) # edf is close to 9 for temperature and julian date, so we will double the knots to 20
 
 m17 <- gam(data = lssp,
-           Inside~s(scale(Temperature), bs="ts", k = 4) + s(scale(Wind.Speed),bs="ts", k = 4) +  # Environment
+           Inside~s(scale(Temperature), bs="ts", k = 4) + s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
                   s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(scale(Time), bs="cc") + s(scale(julian), bs="ts", k = 6)+ # Time and date
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
+plot(m17)
+plotResiduals(m17)
+summary(m17) # explains 66.9% of deviance
+
+
+m18 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 4) + s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+summary(m18) # 47.3% - date and time explains 19.6% of the deviance
+
+
 
 # polynomial (wind) or linear (temp)
 # lme 
 # pq = 5 for corarma
+
+
+
+
+
+
+
 
 # Model checks
 AIC(m14, m15) # m15 reduces the AIC 
