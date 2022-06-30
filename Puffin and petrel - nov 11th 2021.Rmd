@@ -30,7 +30,31 @@ knitr::opts_chunk$set(echo = TRUE)
     
 5. Calculate the burrow temperature buffering
 
+6. Modelling
+    * MODEL - Predict drivers of burrow buffering capacity
+    * MODEL - Predict drivers of burrow microclimate
+    * MODEL - Overperforming burrows
+    
+7. Plotting
+    * Fig 2 - Tile plot of seasonal temperature
+    * Fig 3 -
+    * Fig 4 -
+    * Fig 5 -
+    
+    
 
+Create seasonal temperature trend plot
+Hour of day average
+Max, min, mean
+Buffer
+Create a tile plot of temperature 
+
+
+X. Summary Information
+    * Burrow Features
+    * Calculate the circular mean and SD for burrow orientation
+
+X. Change Point Analysis
 
 ##______________________________________________________________
 ## 1. Format the PUFFIN temperature data
@@ -740,10 +764,10 @@ summary(m7$gam)
 ```
 
 
+##______________________________________________________________
+## 6. Modelling
+##______________________________________________________________
 
-
-
-## MODELLING
 
 Eight modelling steps from Zurr et al. (2010) "A protocol for data exploration to avoid common statistical problems":
 
@@ -758,7 +782,7 @@ Eight modelling steps from Zurr et al. (2010) "A protocol for data exploration t
 
 
 
-# Look for multicolinearity 
+*Look for multicolinearity* 
 
 library(GGally)
 
@@ -1144,6 +1168,10 @@ ggplot(heat, aes(x = Canopy, y = Buffer, group = Species)) +
     plottheme
   theme(legend.position = "none")
 ```
+
+##______________________________________________________________
+## 7. Plotting
+##______________________________________________________________
 
 
 ## Create seasonal temperature trend plot
@@ -2514,6 +2542,8 @@ temp / heat
 
 
 
+
+
 ## STATISTICAL SECTION
 
 
@@ -2625,11 +2655,9 @@ ATPU_LSSP %>%
 
 ```
 
-
-
-
-## Burrow Features
-
+##______________________________________________________________
+## X. Summary Information
+##______________________________________________________________
 
 WEATHER
 - match the weather data (30 mins) to the burrow temps (15 minutes) or the other way around?
@@ -2705,8 +2733,9 @@ rad2deg(1.222865) ## = 70.07
 ```
 
 
-
-## CHANGE POINT ANALYSIS
+##______________________________________________________________
+## X. Change Point Analysis
+##______________________________________________________________
 
 Run a change point analysis with package `changepoint` which finds changes in mean/variance of the internal burrow temperature to identify whether there was a significant change when the extreme seasonal events hit. 
 
