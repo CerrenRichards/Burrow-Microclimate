@@ -1,7 +1,16 @@
 # Burrow-Microclimate
 
-Code for exploring the 2019 and 2021 Atlantic Puffin and Leach's Storm-petrel microclimate data.
+This repository contains the R code required to replicate the analyses in **Richards et al. "Burrows buffer nest temperatures and offer thermal refugia for threatened seabird chicks during extreme events"**.
 
-`Puffin and petrel - nov 11th 2021.Rmd` is the most recent file for the 2021 data and chapter 1 of PhD
+## Scripts
+`Puffin and petrel - nov 11th 2021.Rmd` The R Markdown file that contains the code for the analysis.
 
 `Burrow Microclimate Code - June 2nd 2021 .Rmd` is the older version of the code
+
+
+## Data
+Data are available upon request from Cerren Richards. 
+
+
+## Contact
+Any queries can be directed to **Cerren Richards** cerrenrichards@gmail.com
