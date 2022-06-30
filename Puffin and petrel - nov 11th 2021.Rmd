@@ -9,14 +9,38 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+##______________________________________________________________
+## Code Contents
+##______________________________________________________________
+
+1. Format the PUFFIN temperature data
+    * Combine all the temperature .csv files
+    * Set up the date and time correctly
+    * Match the logger numbers to the data
+
+2. Format the PETREL temperature data
+    * Combine all the temperature .csv files
+    * Set up the date and time correctly
+
+3. Join the formatted puffin and petrel data
+    * Join the burrow features to the dataframe of temperatures
+
+4. Format the weather data
+    * Join the weather data to the burrow temperature data
+    
+5. Calculate the burrow temperature buffering
 
 
-### PUFFINS
-Have to move the puffin .csv files into the working directory 
+
+##______________________________________________________________
+## 1. Format the PUFFIN temperature data
+##______________________________________________________________
 
 ## Combine all the files
 
-- Combine all the separate burrow .csv files
+Have to move the puffin .csv files into the working directory 
+
+Combine all the separate burrow .csv files
 
 ```{r}
 
@@ -61,6 +85,8 @@ temps <- temps %>% filter(datetime >= "2021-07-17 17:00:00") %>%
 
 ## Match the logger numbers to the data
 
+Match the information on the burrows that link to the logger data
+
 *** theres an issue with joining - more rows are added ?
 
 Missing Outside logger - Burrow 6
@@ -80,7 +106,10 @@ write.csv(temps, "ATPU_formatted_temps.csv")
 ```
 
 
-# PETREL DATA
+##______________________________________________________________
+## 2. Format the PUFFIN temperature data
+##______________________________________________________________
+
 
 ```{r}
 setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/2021/Temp data 2021/LSSP edited")
@@ -92,6 +121,7 @@ temps_LSSP <- do.call(rbind, lapply(files, function(x) read.csv(x, stringsAsFact
 
 
 ```
+
 
 ## Set up the date and time correctly
 
@@ -130,7 +160,13 @@ write.csv(temps_LSSP, "petrel_temps_formatted.csv")
 
 ```
 
-## Join the formatted ATPU and LSSP data
+
+##______________________________________________________________
+## 3. Join the formatted puffin and petrel data
+##______________________________________________________________
+
+ATPU = Atlantic puffin
+LSSP = Leach's storm-petrel
 
 ```{r}
 ## For reading in the data if the above steps have already been done:
@@ -201,10 +237,10 @@ model_df <- model_df %>%
 
 ```
 
+##______________________________________________________________
+## 4. Format the weather data
+##______________________________________________________________
 
-## WEATHER DATA
-
-Format the weather data
 
 ```{r}
 
@@ -248,7 +284,7 @@ weather <- rbind(weather1, weather2)
 
 ```
 
-## Join the weather data to the model_df
+## Join the weather data to the burrow temperature data
 
 weather1 = "Forested Plot"
 weather2 = "Open Plot"
@@ -277,12 +313,15 @@ model_df_short <- model_df_long %>% filter(!is.na(Temperature))
 ```
 
 
-## Explore the buffering
+##______________________________________________________________
+## 5. Calculate the burrow temperature buffering
+##______________________________________________________________
 
 negative = inside colder than outside
 positive = warmer than outside
 
 outlogger is warmer or colder than the kestrel
+
 ```{r}
 
 ## How do the external loggers compare to the kestrel weather station
