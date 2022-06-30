@@ -37,19 +37,11 @@ knitr::opts_chunk$set(echo = TRUE)
     
 7. Plotting
     * Fig 2 - Tile plot of seasonal temperature
-    * Fig 3 -
-    * Fig 4 -
-    * Fig 5 -
+    * Fig 3 - Violin plot of max, min, mean burrow temperature
+    * Fig 4 - Hour of day mean temperature plot
+    * Fig 5 - Buffering temperature plot
+    * Visualising other data
     
-    
-
-Create seasonal temperature trend plot
-Hour of day average
-Max, min, mean
-Buffer
-Create a tile plot of temperature 
-
-
 X. Summary Information
     * Burrow Features
     * Calculate the circular mean and SD for burrow orientation
@@ -127,6 +119,7 @@ temps <- left_join(temps, loggers, by = "ID")
 
 ## save the formatted file
 write.csv(temps, "ATPU_formatted_temps.csv")
+
 ```
 
 
@@ -410,359 +403,8 @@ atpu <- filter(model_df_short, Species == "Atlantic puffin")
 # set burrow as factor
 lssp$Burrow <- factor(lssp$Burrow)
 
-# save a file so if it crashes
-#save(lssp, file = "lssp.Rdata")
-
-# load in
-load("lssp.Rdata")
-
-
-# Explore the data
-hist(lssp$buffer_logger)
-hist(atpu$buffer_logger)
-
-hist(lssp$buffer_kestrel)
-hist(atpu$buffer_kestrel)
-
-hist(lssp$Outside)
-hist(atpu$Outside)
-
-hist(lssp$Inside)
-hist(atpu$Inside)
-
-hist(lssp$Temperature)
-hist(atpu$Temperature)
-
-hist(weather$Temperature)
-
-library(mgcv)
-
-
-m1 <- gamm(data = lssp,
-           buffer_kestrel~s(Enterance_Area) + s(Height) + s(Width) + s(Depth),
-           random = list(Burrow = ~1))
-
-m1 <- gamm(data = lssp,
-           buffer_kestrel~s(Enterance_Area) + s(volume),
-           random = list(Burrow = ~1))
-
-m2 <- gamm(data = model_df_short,
-           buffer_kestrel~s(Enterance_Area) + s(volume),
-           random = list(Burrow = ~1))
-
-
-m3 <- gamm(data = atpu,
-           Inside~s(Temperature)+ s(Enterance_Area) + s(volume) +s(Time),
-           random = list(Burrow = ~1))
-
-hist(resid(m3$gam))
-plot(m3$gam)
-
-summary(m3$gam)
-
-
-ggplot(data = model_df_short, aes(x = Plot, y = Inside))+
-  geom_boxplot()+
-  plottheme
-
-
-plot(lssp$Canopy,    lssp$buffer_logger)
-plot(lssp$Ground_cover,    lssp$buffer_kestrel)
-plot(lssp$Proportion_fern, lssp$buffer_logger)
-
-plot(atpu$Wind.Speed, atpu$Inside)
-
-plot(lssp$Barometric.Pressure, lssp$Temperature)
-
-plot(model_df_short$volume, model_df_short$Inside)
-
-plot(model_df_short$Enterance_Area, model_df_short$buffer_kestrel)
-
-
-
-## Build first model
-## PREDICTORS OF BURROW MICROCLIMATE
-library(mgcv)
-
-# Petrel
-
-
-# no need for gamm - can model with gam and include random effects like `s(Burrow, bs="re")`, where bs="re" indicates random effects
-
-# For the time spline, it's important to define it as circular with bs="cc"
-
-# When we were building the models, we we're individually removing the spline predictors, but using bs="ts", removes them for you within the model for you
-
-# We scaled the predictors in the model, but scaling them in the dataframe lets you compare whats happening to the raw data when you're scaling (it's fine to do either way though)
-
-# It's better to use method = REML, rather than the GCV default
-
-# You can run gam in parallel with gam control to make it go faster when you have lots of data 
-
-# The default number for k is 10, so in the model summary, when the edf is 9, it's recommended to double the k value. There are lots of methods to test for whether you need to change the k values. 
-
-# Post gam checks:
-# Dharma package for checking the model fit
-
-# pre gam checks:
-# vis.concurvity function in the dsm package (darker colours = bad) - like a multicolinearity check, but for squiggliness 
-
-
-m14 <- gam(data = lssp,
-           Inside~s(scale(Temperature), bs="ts") + s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
-                  s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
-                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts")+ # Time and date
-                  s(Burrow, bs="re"), # random effect
-                  method = "REML") 
-
-summary(m14)
-
-### LEFT HERE APRIL 11TH, 2O22 
-
-# "ts" removes it from the model - like removing it from the model
-# time - important to define circular 
-# "day of year" not Julian
-# ?choose.k for info
-# use REML rather than the GCV default
-# when edf is 9, recommended to double the K
-# p-val test to see whether to change to k values
-
-# gam control - parallel
-# GLMM faq - Ben Bolker
-# GLM - standard error that are too wide if overfitting
-# check out about overfitting
-# post gam checks 
-# vif
-# model without the scale
-# Dharma
-# concurvity - mgcv library - 3 values - use the middle
-# vis.concurvity - dsm package - dark = bad
-
-
-
-
-
-
-m1 <- gamm(data = lssp,
-           Inside~s(scale(Temperature)) + s(scale(Wind.Speed)) +  # Environment
-                  s(scale(Enterance_Area)) + s(scale(volume)) + # Burrow features
-                  s(scale(Canopy)) + s(scale(Ground_cover)) + # Habitat
-                  s(scale(Time)) + s(scale(julian)), # Time and date
-           random = list(Burrow = ~1))
-
-
-
-
-m10 <- gamm(data = lssp,
-           Inside~s(scale(Temperature)) + s(scale(Wind.Speed)) +  # Environment
-                  s(scale(Time)) + s(scale(julian)), # Time and date
-           random = list(Burrow = ~1))
-
-
-m11 <- gamm(data = lssp,
-           Inside~scale(Temperature) +
-                  s(scale(Time)) + s(scale(julian)), # Time and date
-           random = list(Burrow = ~1))
-
-
-m12 <- gamm(data = lssp,
-           Inside~s(scale(Time)) + s(scale(julian)), # Time and date
-           random = list(Burrow = ~1))
-
-
-# take resid of m12 - which are under or over preforming relative to time and date
-#avg burrow response and which are deviating 
-
-# Look at the residuals 
-lssp$residuals_lssp <- resid(m12$gam)
-
-# Make burrow a character
-lssp$ID <- as.character(lssp$Burrow)
-
-# Visualise the residuals between burrows
-library(ggplot2)
-ggplot(data = lssp, aes(x = ID, y = residuals))+
-  geom_boxplot()+
-  plottheme
-
-# Residual model
-m13 <- gamm(data = lssp,
-           residuals_lssp~s(scale(Temperature)) + s(scale(Wind.Speed))+ # Environment
-                   s(scale(Enterance_Area)) + s(scale(Height)) + # Burrow features
-                  s(scale(Canopy)) + s(scale(Ground_cover)), # Habitat 
-           random = list(Burrow = ~1))
-
-
-
-
-plot(lssp$Enterance_Area, lssp$residuals_lssp)
-plot(lssp$Height, lssp$residuals_lssp)
-plot(lssp$Width, lssp$residuals_lssp)
-plot(lssp$Depth, lssp$residuals_lssp)
-plot(lssp$volume, lssp$residuals_lssp)
-plot(lssp$Ground_cover, lssp$residuals_lssp)
-plot(lssp$Canopy, lssp$residuals_lssp)
-plot(lssp$Temperature, lssp$residuals_lssp)
-plot(lssp$Wind.Speed, lssp$residuals_lssp)
-
-
-
-summary(m11$gam)
-summary(m12$gam)
-
-plot(m10$gam)
-
-#r2 - the most predictive model - how much variance is explained 
-
-# what's different with the outliers? what's unique 
-
-m8 <- gam(data = mean,
-           mean_inside~ # Environment
-                  s(scale(Enterance_Area), k=4) + s(scale(volume), k=4) +
-            s(scale(Width), k=4) + s(scale(Height), k=4)+ s(scale(Depth), k=4)+# Burrow features
-                  s(scale(Canopy), k=4) + s(scale(Ground_cover), k=4 ))
-
-m9 <- gam(data = mean,
-           mean_inside~ # Environment
-                  s(scale(Canopy), k=4) + s(scale(Ground_cover), k=4 ))
-
-plot(m9)
-
-# depth important
-# Expand out the column heading 
-# intercept for each burrow
-
-#average temp for each burrow 
-
-mean <- lssp %>% group_by(Burrow) %>% summarise(mean_temp = mean(Temperature),
-                                                mean_out = mean(Outside),
-                                        mean_wind = mean(Wind.Speed),
-                                        mean_inside= mean(Inside))
-
-mean <- left_join(mean, burrows)
-
-mean <- filter(mean, Species == "LSSP" )
-
-hist(resid(m1$gam))
-plot(m1$gam)
-summary(m1$gam)
-
-plot(lssp$Temperature, lssp$Date)
-
-
-
-
-
-## PREDICTORS OF BURROW BUFFERING CAPACITY
-
-# Petrel (WEATHER STATION BUFFER)
-m3 <- gamm(data = lssp,
-           buffer_kestrel~ s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
-                  s(Canopy) + s(Ground_cover) + # Habitat
-                  s(Time) + s(julian), # Time and date
-           random = list(Burrow = ~1))
-
-hist(resid(m3$gam))
-plot(m3$gam)
-summary(m3$gam)
-
-
-
-
-
-
-
-
-
-
-
-## Puffin 
-m2 <- gamm(data = atpu,
-           Inside~s(Temperature) + s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
-                  s(Time) + s(julian), # Time and date
-           random = list(Burrow = ~1))
-
-hist(resid(m2$gam))
-plot(m2$gam)
-summary(m2$gam)
-
-
-
-
-
-
-# Petrel (LOGGER BUFFER)
-m4 <- gamm(data = lssp,
-           buffer_logger~s(Temperature) + s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
-                  s(Canopy) + s(Ground_cover) + # Habitat
-                  s(Time) + s(julian), # Time and date
-           random = list(Burrow = ~1))
-
-hist(resid(m4$gam))
-plot(m4$gam)
-summary(m4$gam)
-
-
-
-# Puffin (WEATHER STATION BUFFER)
-m5 <- gamm(data = atpu,
-           buffer_kestrel~ s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
-                  s(Time) + s(julian), # Time and date
-           random = list(Burrow = ~1))
-
-hist(resid(m5$gam))
-plot(m5$gam)
-summary(m5$gam)
-
-
-# Petrel (LOGGER BUFFER)
-m6 <- gamm(data = atpu,
-           buffer_logger~s(Temperature) + s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
-                  s(Time) + s(julian), # Time and date
-           random = list(Burrow = ~1))
-
-hist(resid(m6$gam))
-plot(m6$gam)
-summary(m6$gam)
-
-
-
-
-m7 <- gamm(data = lssp,
-           Inside~s(Temperature) + s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(Height) + s(Width) + s(Depth)+ # Burrow features
-                  s(Canopy) + s(Ground_cover) + # Habitat
-                  s(Time) + s(julian), # Time and date
-           random = list(Burrow = ~1))
-
-
-hist(resid(m7$gam))
-plot(m7$gam)
-summary(m7$gam)
-
-
-
-## Interaction between canopy cover and total ground cover?
-## Add the logger depth as a random effect?
-## Height, Width, Depth or just Volume?
-
-
-
-# directly compare effect size by scaling
-
-# do any of the burrows respond differently during the extreme events - was there anything different in the features for those burrows?
-
-#bs=cc
-
 
 ```
-
 
 ##______________________________________________________________
 ## 6. Modelling
@@ -1138,6 +780,364 @@ ggplot(heat_LSSP, aes(x = Canopy, y = Buffer)) +
 
 
 
+
+## Modelling help from AB and DF
+```{r}
+
+# save a file so if it crashes
+#save(lssp, file = "lssp.Rdata")
+
+# load in
+load("lssp.Rdata")
+
+
+# Explore the data
+hist(lssp$buffer_logger)
+hist(atpu$buffer_logger)
+
+hist(lssp$buffer_kestrel)
+hist(atpu$buffer_kestrel)
+
+hist(lssp$Outside)
+hist(atpu$Outside)
+
+hist(lssp$Inside)
+hist(atpu$Inside)
+
+hist(lssp$Temperature)
+hist(atpu$Temperature)
+
+hist(weather$Temperature)
+
+library(mgcv)
+
+
+m1 <- gamm(data = lssp,
+           buffer_kestrel~s(Enterance_Area) + s(Height) + s(Width) + s(Depth),
+           random = list(Burrow = ~1))
+
+m1 <- gamm(data = lssp,
+           buffer_kestrel~s(Enterance_Area) + s(volume),
+           random = list(Burrow = ~1))
+
+m2 <- gamm(data = model_df_short,
+           buffer_kestrel~s(Enterance_Area) + s(volume),
+           random = list(Burrow = ~1))
+
+
+m3 <- gamm(data = atpu,
+           Inside~s(Temperature)+ s(Enterance_Area) + s(volume) +s(Time),
+           random = list(Burrow = ~1))
+
+hist(resid(m3$gam))
+plot(m3$gam)
+
+summary(m3$gam)
+
+
+ggplot(data = model_df_short, aes(x = Plot, y = Inside))+
+  geom_boxplot()+
+  plottheme
+
+
+plot(lssp$Canopy,    lssp$buffer_logger)
+plot(lssp$Ground_cover,    lssp$buffer_kestrel)
+plot(lssp$Proportion_fern, lssp$buffer_logger)
+
+plot(atpu$Wind.Speed, atpu$Inside)
+
+plot(lssp$Barometric.Pressure, lssp$Temperature)
+
+plot(model_df_short$volume, model_df_short$Inside)
+
+plot(model_df_short$Enterance_Area, model_df_short$buffer_kestrel)
+
+
+
+## Build first model
+## PREDICTORS OF BURROW MICROCLIMATE
+library(mgcv)
+
+# Petrel
+
+
+# no need for gamm - can model with gam and include random effects like `s(Burrow, bs="re")`, where bs="re" indicates random effects
+
+# For the time spline, it's important to define it as circular with bs="cc"
+
+# When we were building the models, we we're individually removing the spline predictors, but using bs="ts", removes them for you within the model for you
+
+# We scaled the predictors in the model, but scaling them in the dataframe lets you compare whats happening to the raw data when you're scaling (it's fine to do either way though)
+
+# It's better to use method = REML, rather than the GCV default
+
+# You can run gam in parallel with gam control to make it go faster when you have lots of data 
+
+# The default number for k is 10, so in the model summary, when the edf is 9, it's recommended to double the k value. There are lots of methods to test for whether you need to change the k values. 
+
+# Post gam checks:
+# Dharma package for checking the model fit
+
+# pre gam checks:
+# vis.concurvity function in the dsm package (darker colours = bad) - like a multicolinearity check, but for squiggliness 
+
+
+m14 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+summary(m14)
+
+### LEFT HERE APRIL 11TH, 2O22 
+
+# "ts" removes it from the model - like removing it from the model
+# time - important to define circular 
+# "day of year" not Julian
+# ?choose.k for info
+# use REML rather than the GCV default
+# when edf is 9, recommended to double the K
+# p-val test to see whether to change to k values
+
+# gam control - parallel
+# GLMM faq - Ben Bolker
+# GLM - standard error that are too wide if overfitting
+# check out about overfitting
+# post gam checks 
+# vif
+# model without the scale
+# Dharma
+# concurvity - mgcv library - 3 values - use the middle
+# vis.concurvity - dsm package - dark = bad
+
+
+
+
+
+
+m1 <- gamm(data = lssp,
+           Inside~s(scale(Temperature)) + s(scale(Wind.Speed)) +  # Environment
+                  s(scale(Enterance_Area)) + s(scale(volume)) + # Burrow features
+                  s(scale(Canopy)) + s(scale(Ground_cover)) + # Habitat
+                  s(scale(Time)) + s(scale(julian)), # Time and date
+           random = list(Burrow = ~1))
+
+
+
+
+m10 <- gamm(data = lssp,
+           Inside~s(scale(Temperature)) + s(scale(Wind.Speed)) +  # Environment
+                  s(scale(Time)) + s(scale(julian)), # Time and date
+           random = list(Burrow = ~1))
+
+
+m11 <- gamm(data = lssp,
+           Inside~scale(Temperature) +
+                  s(scale(Time)) + s(scale(julian)), # Time and date
+           random = list(Burrow = ~1))
+
+
+m12 <- gamm(data = lssp,
+           Inside~s(scale(Time)) + s(scale(julian)), # Time and date
+           random = list(Burrow = ~1))
+
+
+# take resid of m12 - which are under or over preforming relative to time and date
+#avg burrow response and which are deviating 
+
+# Look at the residuals 
+lssp$residuals_lssp <- resid(m12$gam)
+
+# Make burrow a character
+lssp$ID <- as.character(lssp$Burrow)
+
+# Visualise the residuals between burrows
+library(ggplot2)
+ggplot(data = lssp, aes(x = ID, y = residuals))+
+  geom_boxplot()+
+  plottheme
+
+# Residual model
+m13 <- gamm(data = lssp,
+           residuals_lssp~s(scale(Temperature)) + s(scale(Wind.Speed))+ # Environment
+                   s(scale(Enterance_Area)) + s(scale(Height)) + # Burrow features
+                  s(scale(Canopy)) + s(scale(Ground_cover)), # Habitat 
+           random = list(Burrow = ~1))
+
+
+
+
+plot(lssp$Enterance_Area, lssp$residuals_lssp)
+plot(lssp$Height, lssp$residuals_lssp)
+plot(lssp$Width, lssp$residuals_lssp)
+plot(lssp$Depth, lssp$residuals_lssp)
+plot(lssp$volume, lssp$residuals_lssp)
+plot(lssp$Ground_cover, lssp$residuals_lssp)
+plot(lssp$Canopy, lssp$residuals_lssp)
+plot(lssp$Temperature, lssp$residuals_lssp)
+plot(lssp$Wind.Speed, lssp$residuals_lssp)
+
+
+
+summary(m11$gam)
+summary(m12$gam)
+
+plot(m10$gam)
+
+#r2 - the most predictive model - how much variance is explained 
+
+# what's different with the outliers? what's unique 
+
+m8 <- gam(data = mean,
+           mean_inside~ # Environment
+                  s(scale(Enterance_Area), k=4) + s(scale(volume), k=4) +
+            s(scale(Width), k=4) + s(scale(Height), k=4)+ s(scale(Depth), k=4)+# Burrow features
+                  s(scale(Canopy), k=4) + s(scale(Ground_cover), k=4 ))
+
+m9 <- gam(data = mean,
+           mean_inside~ # Environment
+                  s(scale(Canopy), k=4) + s(scale(Ground_cover), k=4 ))
+
+plot(m9)
+
+# depth important
+# Expand out the column heading 
+# intercept for each burrow
+
+#average temp for each burrow 
+
+mean <- lssp %>% group_by(Burrow) %>% summarise(mean_temp = mean(Temperature),
+                                                mean_out = mean(Outside),
+                                        mean_wind = mean(Wind.Speed),
+                                        mean_inside= mean(Inside))
+
+mean <- left_join(mean, burrows)
+
+mean <- filter(mean, Species == "LSSP" )
+
+hist(resid(m1$gam))
+plot(m1$gam)
+summary(m1$gam)
+
+plot(lssp$Temperature, lssp$Date)
+
+
+
+
+
+## PREDICTORS OF BURROW BUFFERING CAPACITY
+
+# Petrel (WEATHER STATION BUFFER)
+m3 <- gamm(data = lssp,
+           buffer_kestrel~ s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Canopy) + s(Ground_cover) + # Habitat
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m3$gam))
+plot(m3$gam)
+summary(m3$gam)
+
+
+
+
+
+
+
+
+
+
+
+## Puffin 
+m2 <- gamm(data = atpu,
+           Inside~s(Temperature) + s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m2$gam))
+plot(m2$gam)
+summary(m2$gam)
+
+
+
+
+
+
+# Petrel (LOGGER BUFFER)
+m4 <- gamm(data = lssp,
+           buffer_logger~s(Temperature) + s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Canopy) + s(Ground_cover) + # Habitat
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m4$gam))
+plot(m4$gam)
+summary(m4$gam)
+
+
+
+# Puffin (WEATHER STATION BUFFER)
+m5 <- gamm(data = atpu,
+           buffer_kestrel~ s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m5$gam))
+plot(m5$gam)
+summary(m5$gam)
+
+
+# Petrel (LOGGER BUFFER)
+m6 <- gamm(data = atpu,
+           buffer_logger~s(Temperature) + s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+hist(resid(m6$gam))
+plot(m6$gam)
+summary(m6$gam)
+
+
+
+
+m7 <- gamm(data = lssp,
+           Inside~s(Temperature) + s(Wind.Speed) +  # Environment
+                  s(Enterance_Area) + s(Height) + s(Width) + s(Depth)+ # Burrow features
+                  s(Canopy) + s(Ground_cover) + # Habitat
+                  s(Time) + s(julian), # Time and date
+           random = list(Burrow = ~1))
+
+
+hist(resid(m7$gam))
+plot(m7$gam)
+summary(m7$gam)
+
+
+
+## Interaction between canopy cover and total ground cover?
+## Add the logger depth as a random effect?
+## Height, Width, Depth or just Volume?
+
+
+
+# directly compare effect size by scaling
+
+# do any of the burrows respond differently during the extreme events - was there anything different in the features for those burrows?
+
+#bs=cc
+```
+
+
+
+
 ## Two models
 ```{r}
 
@@ -1168,6 +1168,87 @@ ggplot(heat, aes(x = Canopy, y = Buffer, group = Species)) +
     plottheme
   theme(legend.position = "none")
 ```
+
+
+## Other/older modelling
+
+```{r}
+library(nlme)
+
+## First look at the overall trend between the burrows
+##PUFFINS
+
+# Run a linear mixed-effects model
+m1 <- lme(temp ~ Burrow, 
+    random = ~1|datetime, 
+    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
+
+qqnorm(m1)
+plot(m1)
+hist(resid(m1))
+summary(m1)
+
+# 95% confidence intervals
+intervals(m1)
+
+# Test whether a gls would provide a better fit
+m2 <- gls(temp ~ Burrow, 
+    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
+
+# Add temporal autocorrelation
+m3 <- gls(temp ~ Burrow,
+          cor=corARMA(q=4,form=~1|datetime),
+    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
+
+# Compare the three models
+# m1 has the lowest AIC score
+anova(m1, m2, m3)
+
+
+
+modelling <- ATPU_LSSP %>% filter(Location == "Inside") %>%
+  group_by(Date, Burrow, Species) %>%
+  summarise(Mean = mean(temp),
+            Max = max(temp), 
+            Min = min(temp))
+
+
+
+
+# build model to test the inter-nest differences in temperatures
+
+m.mean.puffin <- lme(Mean ~ Burrow, 
+    random = ~1|Date, 
+    data=filter(modelling, Species == "Atlantic puffin"))
+
+summary(m.mean.puffin)
+
+
+m.mean.petrel <- lme(Mean ~ Burrow, 
+    random = ~1|Date, 
+    data=filter(modelling, Species == "Leach's storm-petrel"))
+
+hist(resid(m.mean.petrel))
+plot(m.mean.petrel)
+
+
+
+m1 <- lme(temp ~ Burrow, 
+    random = ~1|datetime, 
+    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
+
+
+
+m1 <- lm(temp ~ Burrow, 
+    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
+
+
+
+```
+
+
+
+
 
 ##______________________________________________________________
 ## 7. Plotting
@@ -2541,120 +2622,6 @@ temp / heat
 
 
 
-
-
-
-## STATISTICAL SECTION
-
-
-```{r}
-library(nlme)
-
-## First look at the overall trend between the burrows
-##PUFFINS
-
-# Run a linear mixed-effects model
-m1 <- lme(temp ~ Burrow, 
-    random = ~1|datetime, 
-    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
-
-qqnorm(m1)
-plot(m1)
-hist(resid(m1))
-summary(m1)
-
-# 95% confidence intervals
-intervals(m1)
-
-# Test whether a gls would provide a better fit
-m2 <- gls(temp ~ Burrow, 
-    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
-
-# Add temporal autocorrelation
-m3 <- gls(temp ~ Burrow,
-          cor=corARMA(q=4,form=~1|datetime),
-    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
-
-# Compare the three models
-# m1 has the lowest AIC score
-anova(m1, m2, m3)
-
-
-
-
-
-
-
-
-
-
-modelling <- ATPU_LSSP %>% filter(Location == "Inside") %>%
-  group_by(Date, Burrow, Species) %>%
-  summarise(Mean = mean(temp),
-            Max = max(temp), 
-            Min = min(temp))
-
-
-
-
-# build model to test the inter-nest differences in temperatures
-
-m.mean.puffin <- lme(Mean ~ Burrow, 
-    random = ~1|Date, 
-    data=filter(modelling, Species == "Atlantic puffin"))
-
-summary(m.mean.puffin)
-
-
-m.mean.petrel <- lme(Mean ~ Burrow, 
-    random = ~1|Date, 
-    data=filter(modelling, Species == "Leach's storm-petrel"))
-
-hist(resid(m.mean.petrel))
-plot(m.mean.petrel)
-
-
-
-m1 <- lme(temp ~ Burrow, 
-    random = ~1|datetime, 
-    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
-
-
-
-m1 <- lm(temp ~ Burrow, 
-    data=filter(ATPU_LSSP, Species == "Atlantic puffin" & Location == "Inside"))
-
-
-
-```
-
-
-## Summary statistics
-
-```{r}
-
-## Calculate the mean variance between burrows
-mean_puffin <- ATPU_LSSP %>% filter(Location == "Inside") %>%
-  group_by(Burrow, Species) %>%
-  summarise(var = var(temp))
-
-# The mean variation between the burrows
-mean_puffin %>% group_by(Species) %>%
-  summarise(mean = mean(var),
-            sd = sd(var))
-
-
-
-## The mean burrow temperatures
-ATPU_LSSP %>% 
-  group_by(Species, Location) %>%
-  summarise(mean = mean(temp),
-            sd = sd(temp))
-
-
-
-```
-
 ##______________________________________________________________
 ## X. Summary Information
 ##______________________________________________________________
@@ -2685,6 +2652,22 @@ burrow_means <- burrows %>% group_by(Species) %>%
             enter.area.sd = sd(Enterance_Area, na.rm =T))
 
 
+
+## Calculate the mean variance between burrows
+mean_puffin <- ATPU_LSSP %>% filter(Location == "Inside") %>%
+  group_by(Burrow, Species) %>%
+  summarise(var = var(temp))
+
+# The mean variation between the burrows
+mean_puffin %>% group_by(Species) %>%
+  summarise(mean = mean(var),
+            sd = sd(var))
+
+## The mean burrow temperatures
+ATPU_LSSP %>% 
+  group_by(Species, Location) %>%
+  summarise(mean = mean(temp),
+            sd = sd(temp))
 ```
 
 ## Calculate the circular mean and SD for burrow orientation
