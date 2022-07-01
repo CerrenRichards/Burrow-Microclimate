@@ -1254,6 +1254,57 @@ m1 <- lm(temp ~ Burrow,
 ## 7. Plotting
 ##______________________________________________________________
 
+## Fig 4 - Hour of day mean temperature plot
+
+```{r}
+
+# Gather the data 
+maxmin_season <- model_df_short %>% 
+                            select(Date, Time, 
+                                   Species, Outside, 
+                                   Inside, Temperature) %>%
+                            gather(Location, Temp, Outside:Temperature)
+
+# Give the weather station data a new name
+maxmin_season$Location[maxmin_season$Location == "Temperature"] <- "Air"
+
+# Summaries the mean, max, min and sd per hour across all burrows
+# Burrow 6 is missing
+maxmin_season <- maxmin_season %>% group_by(Time, Species, Location) %>%
+    summarise(Mean = mean(Temp, na.rm = T),
+            Max = max(Temp, na.rm = T), 
+            Min = min(Temp, na.rm = T),
+             sd = sd(Temp, na.rm = T))
+
+# specify the order of the colours
+maxmin_season$Location <- factor(maxmin_season$Location, levels=c("Outside", "Air", "Inside"))
+
+
+# Create the plot
+ggplot(data = maxmin_season, aes(x = Time, y = Mean, group = Location))+
+  geom_ribbon(aes(ymin=Mean-sd, ymax=Mean+sd, fill = Location), alpha = 0.35)+
+  geom_line(aes(colour = Location, linetype = Location),  size = 1.25)+
+  xlab("Time of Day (h)") + ylab("Temperature (°C)")+
+  scale_x_continuous(breaks=seq(0,23,4))+
+  plottheme+
+  theme(legend.title = element_blank())+ 
+  scale_colour_manual(values = c("#43A407","#80DEEA", "#4E342E"))+
+  scale_fill_manual(values = c("#43A407","#80DEEA", "#4E342E"))+
+  theme(legend.position = c(0.9, 0.8))+
+  facet_wrap(~Species, scales = "free_x")+
+  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
+        strip.background = element_rect(fill="black"))
+
+
+# Save plot
+ggsave("avg_temp_plot_legend.png", 
+       width = 170, height = 100, unit = "mm")
+
+```
+
+
+
+
 
 ## Create seasonal temperature trend plot
 
@@ -1368,7 +1419,9 @@ ggplot(data = filter(ATPU_LSSP, Location =="Inside"), aes(x = datetime, y = temp
 
 ```
 
-## Hour of day average
+
+
+## Hour of day average - old
 
 ```{r}
 
@@ -1786,33 +1839,68 @@ maxmin <- ATPU_LSSP %>% filter(Location == "Inside") %>%
 maxmin2 <- maxmin %>% gather(Unit, Temperature, `Daily Mean`:`Daily Min.`)
 maxmin2$Burrow <- as.character(maxmin2$Burrow)
 
-
-## Daily max, min and mean - with gray lines
-ATPUmaxmin <- maxmin2 %>% filter(Species == "Atlantic puffin")
-LSSPmaxmin <- maxmin2 %>% filter(Species == "Leach's storm-petrel")
-
 ## Plot a facet wrap version
 
 # Calculate the mean line
 meanline <- maxmin2 %>% group_by(Species, Unit) %>%
   summarise(mean = mean(Temperature))
   
+
 # Create the plot
 ggplot()+
-  geom_violin(data = maxmin2, aes(x = reorder(Burrow, -Temperature), 
+  geom_violin(data = maxmin2, aes(x = reorder(Burrow, -mean), 
                   y = Temperature, 
                   fill = Unit, colour = Unit))+
   scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
   scale_colour_manual(values = c( "#E16E08","#F9E07F","#89B4C7")) +
-  xlab("Burrow ID") + ylab("Temperature (°C)")+
+  xlab("Burrow") + ylab("Temperature (°C)")+
   plottheme+
   guides( alpha = FALSE, fill = FALSE, colour = FALSE)+
   facet_grid(Unit~Species, scales = "free")+
   theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
         strip.text.y = element_text(size = 16, color = "white", face = "bold"),
-        strip.background = element_rect(fill="black"))+
+        strip.background = element_rect(fill="black"),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())+
   geom_hline(data = meanline, aes(yintercept = mean), linetype = "dashed")
 
+
+## Summarise the mean daily temperatures across all burrows so that we can order
+## the main plot by decreaing mean temp
+mean <- filter(maxmin2, Unit =="Daily Mean") %>% group_by(Species, Burrow) %>% 
+  summarise(mean = mean(Temperature))
+
+meanatpu <- mean %>% filter(Species == "Atlantic puffin") %>%
+                            arrange(desc(mean))
+
+meanlssp <- mean %>% filter(Species == "Leach's storm-petrel") %>%
+                            arrange(desc(mean))
+
+atpulevels <- maxmin2 %>% filter(Species == "Atlantic puffin") 
+lssplevels <- maxmin2 %>% filter(Species == "Leach's storm-petrel")
+
+atpulevels$Burrow <- factor(atpulevels$Burrow, levels=meanatpu$Burrow)
+lssplevels$Burrow <- factor(lssplevels$Burrow, levels=meanlssp$Burrow)
+
+maxmin2 <- rbind(atpulevels, lssplevels)
+
+ggplot()+
+  geom_violin(data = maxmin2, aes(x = Burrow, 
+                  y = Temperature, 
+                  fill = Unit, colour = Unit))+
+  scale_fill_manual(values = c("#E16E08", "#F9E07F","#89B4C7")) +
+  scale_colour_manual(values = c( "#E16E08","#F9E07F","#89B4C7")) +
+  xlab("Burrow") + ylab("Temperature (°C)")+
+  plottheme+
+  guides( alpha = FALSE, fill = FALSE, colour = FALSE)+
+  facet_grid(Unit~Species, scales = "free")+
+  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
+        strip.text.y = element_text(size = 16, color = "white", face = "bold"),
+        strip.background = element_rect(fill="black"),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank()
+        )+
+  geom_hline(data = meanline, aes(yintercept = mean), linetype = "dashed")
 
 ```
 
