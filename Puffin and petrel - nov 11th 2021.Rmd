@@ -1254,6 +1254,28 @@ m1 <- lm(temp ~ Burrow,
 ## 7. Plotting
 ##______________________________________________________________
 
+## Fig 2 - Tile plot of seasonal temperature
+
+The following plot has been edited further to add the locations of the extreme events.
+
+```{r}
+
+# Using the data from the open plot weather station to create the tile plot
+
+ggplot(weather2, aes(x = Date, y = Time, fill = Temperature)) +
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), # remove the major lines
+        panel.grid.minor = element_blank())+
+  geom_tile(colour = "white", size = 0.15)+
+  scale_fill_distiller(palette = "RdYlBu", direction = -1)+
+  ylab("Time of Day (h)")+ theme(axis.title.y = element_text(vjust = 3)) +
+  theme(legend.position="bottom")+
+  guides(fill = guide_colourbar(barwidth = 10, barheight = 0.5))
+
+
+```
+
+
 
 
 ## Fig 3 - Violin plot of max, min, mean burrow temperature
@@ -1265,13 +1287,12 @@ library(tidyr)
 ## Daily max, min and mean
 
 ## Summarise the daily max, min and mean for each burrow
-maxmin <- ATPU_LSSP %>% filter(Location == "Inside") %>%
+maxmin <- model_df_short %>%
   group_by(Date, Burrow, Species) %>%
-  summarise(`Daily Mean` = mean(temp),
-            `Daily Max.` = max(temp), 
-            `Daily Min.` = min(temp)) %>%
+  summarise(`Daily Mean` = mean(Inside),
+            `Daily Max.` = max(Inside), 
+            `Daily Min.` = min(Inside)) %>%
              gather(Unit, Temperature, `Daily Mean`:`Daily Min.`) # Gather the data  
-
 
 # Calculate the mean line
 meanline <- maxmin %>% group_by(Species, Unit) %>%
@@ -1365,6 +1386,173 @@ ggplot(data = maxmin_season, aes(x = Time, y = Mean, group = Location))+
 # Save plot
 ggsave("avg_temp_plot_legend.png", 
        width = 170, height = 100, unit = "mm")
+
+```
+
+
+## Fig 5 - Buffering temperature plot
+
+```{r}
+
+
+
+
+ggplot()+
+  geom_line(data = filter(season_mean_temp, Location == "Inside"),
+            aes(x = datetime, y = mean))+
+  geom_point(data = forest_join, aes(x = datetime2, y = Temperature, alpha = 0.3))+
+  #geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd, fill = Location), alpha = 0.4)+
+  plottheme+
+  theme(legend.title = element_blank())+ 
+  ylab("Temperature (°C)")+
+  #scale_colour_manual(values = c("#43A407", "#4E342E"))+
+ # scale_fill_manual(values = c("#43A407", "#4E342E"))+
+  theme(legend.position = c(0.85, 0.70))+
+  facet_wrap(~Species, scales = "free_x")+
+  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
+        strip.background = element_rect(fill="black"),
+        axis.title.x = element_blank())
+
+
+
+
+
+## Identify the extreme events
+## Here we define "extreme" as the 1 and 99 percentiles
+quant_weather <- model_df_short %>%
+  group_by(Species) %>%
+  summarise(quantile1 = quantile(Temperature, c(.01), na.rm = T),
+            quantile99 = quantile(Temperature, c(.99), na.rm = T))
+
+
+## Filter out the extreme temperatures (Leach's)
+extreme_cold_LSSP <- filter(model_df_short, Temperature <= 6.5 & Species == "Leach's storm-petrel")
+extreme_cold_LSSP$Extreme <- "Cold Extreme"
+mean(extreme_cold_LSSP$buffer_kestrel) # 7.3838 deg C
+sd(extreme_cold_LSSP$buffer_kestrel) #1.214295
+
+extreme_heat_LSSP <- filter(model_df_short, Temperature >= 25.7 & Species == "Leach's storm-petrel")
+extreme_heat_LSSP$Extreme <- "Heat Extreme"
+mean(extreme_heat_LSSP$buffer_kestrel) #-9.437 deg C
+sd(extreme_heat_LSSP$buffer_kestrel) # 1.409367
+
+## Filter out the extreme temperatures (Puffin)
+extreme_cold_ATPU <- filter(model_df_short, Temperature <= 10 & Species == "Atlantic puffin")
+extreme_cold_ATPU$Extreme <- "Cold Extreme"
+mean(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 8.049758 deg C
+sd(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 1.534774
+
+extreme_heat_ATPU <- filter(model_df_short, Temperature >= 25.6 & Species == "Atlantic puffin")
+extreme_heat_ATPU$Extreme <- "Heat Extreme"
+mean(extreme_heat_ATPU$buffer_kestrel, na.rm = T) # -5.385507 deg C
+sd(extreme_heat_ATPU$buffer_kestrel, na.rm = T) #1.81329
+
+
+## Join the dataframes
+extreme <- rbind(extreme_cold_LSSP, extreme_heat_LSSP, 
+                 extreme_cold_ATPU, extreme_heat_ATPU)
+
+
+# Jitter plot
+# puffins
+extreme_puffin<- ggplot(filter(extreme, Species == "Atlantic puffin"), 
+                        aes(x = Extreme, y = buffer_kestrel)) +
+  geom_boxplot( aes(fill = buffer_kestrel>0))+
+  scale_fill_manual(values = c("#89B4C7", "#E16E08"))+
+  ylab(bquote(T[Buffer]~"(°C)"))+ xlab("Thermal Event")+
+  geom_hline(yintercept = 0, linetype="dashed", size = 1)+
+    plottheme+
+  theme(legend.position = "none")+
+  facet_wrap(~Species)+
+    theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
+
+
+
+# petrels
+extreme_petrel<- ggplot(filter(extreme, Species == "Leach's storm-petrel"),
+                        aes(x = Extreme, y = buffer_kestrel)) +
+  geom_boxplot( aes(fill = buffer_kestrel>0))+
+  scale_fill_manual(values = c("#89B4C7", "#E16E08"))+
+  ylab(bquote(T[Buffer]~"(°C)"))+ xlab("Thermal Event")+
+  geom_hline(yintercept = 0, linetype="dashed", size = 1)+
+    plottheme+
+  theme(legend.position = "none")+
+  facet_wrap(~Species)+
+    theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
+
+
+## Create correlation
+# Puffins
+corr_puffin<-ggplot(filter(model_df_short, Species == "Atlantic puffin"), 
+                    aes(x=Temperature, y = Inside))+
+  geom_point(alpha = 0.2)+
+  ylab(bquote(T[Internal]~"(°C)"))+
+  xlab(bquote(T[External]~"(°C)"))+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.title.y = element_text(vjust = 3)) +
+  facet_wrap(~Species)+
+    plottheme+
+   theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
+
+# petrels
+corr_petrel<-ggplot(filter(model_df_short, Species == "Leach's storm-petrel"), 
+                    aes(x=Temperature, y = Inside))+
+  geom_point(alpha = 0.2)+
+  ylab(bquote(T[Internal]~"(°C)"))+
+  xlab(bquote(T[External]~"(°C)"))+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.title.y = element_text(vjust = 3)) +
+  facet_wrap(~Species)+
+   plottheme+
+   theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
+
+
+## NEED TO TEST FOR NORMALLITY FIRST
+
+# Calculate the correlation
+cor.test(lssp$Temperature, lssp$Inside) # R = 0.35 [0.34-0.36] p < 0.001
+cor.test(atpu$Temperature, atpu$Inside) # R = 0.38 [0.37-0.39] p < 0.001
+
+# Summarise the mean temperature and standard deviation for inside and outside the burrows
+season <- model_df_short %>%
+  group_by(Species, datetime) %>%
+  summarise(mean = mean(Inside), 
+            sd = sd(Inside),
+            meankest = mean(Temperature),
+            sdkest = sd(Temperature))
+
+
+tempall <- ggplot(data = season, aes(x = datetime, y = mean))+
+  geom_line(colour = "#4E342E", linetype = "dashed")+
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd), 
+              fill = "#4E342E",alpha = 0.4)+
+  geom_line(aes(x = datetime, y = meankest), colour = "#43A407")+
+  plottheme+
+  theme(legend.title = element_blank())+ 
+  ylab("Temperature (°C)")+
+  theme(legend.position = c(0.85, 0.70))+
+  facet_wrap(~Species, scales = "free_x")+
+  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
+        strip.background = element_rect(fill="black"),
+        axis.title.x = element_blank())
+
+
+
+# create the stacked plot
+tempall / (corr_puffin | extreme_puffin | corr_petrel | extreme_petrel) 
+
+
+# save the plot
+ggsave("stacked_buffer_weather.png", 
+       dpi = 600, 
+       width = 350, height = 150, unit = "mm")
+
 
 ```
 
