@@ -461,13 +461,13 @@ m14 <- gam(data = lssp,
 
 # Visualise concurvity of the model
 library(dsm)
-vis.concurvity(m14)
+vis.concurvity(m17)
 
 #concurvity(m14)
 
 # Explore model fit with `DHARMa` package
 # https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html
-library(DHARMa); library(lme4); library(mgcViz)
+library(DHARMa); library(lme4); library(mgcViz); library(mgcv)
 
 # Visualise the VIF
 devtools::install_github("samclifford/mgcv.helper")
@@ -476,38 +476,56 @@ library(mgcv.helper)
 mgcv.helper::vif.gam(m14) ## Errors here
 
 # Visualise dispersion
-testDispersion(m14)
+testDispersion(m17)
 
 # QQplot
-plotQQunif(m14)
+plotQQunif(m17)
 
 # Residuals
-plotResiduals(m14)
+hist(resid(m17))
+plotResiduals(m17)
 
 # Test for zero inflation
-testZeroInflation(m14)
+testZeroInflation(m17)
 
-hist(resid(m14))
-plot(m14)
+plot(m17)
 
 summary(m14) # edf is close to 9 for temperature and julian date, so we will double the knots to 20
 
 m17 <- gam(data = lssp,
-           Inside~s(scale(Temperature), bs="ts", k = 4) + s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
-                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts", k = 6)+ # Time and date
+                  s(scale(Time), bs="cc") + # Time
+                  s(scale(julian), bs="ts", k = 6) + # Date
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
-plot(m17)
+m16 <- gam(data = lssp,
+           Inside~s(scale(Temperature),  k = 4) + # Weather 
+                  s(scale(Wind.Speed), k = 4) +  # Weather
+                  s(scale(Enterance_Area)) + # Burrow features
+                  s(scale(volume)) + # Burrow features
+                  s(scale(Canopy)) + # Habitat
+                  s(scale(Time), bs="cc") + # Time
+                  s(scale(julian), k = 6) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+anova(m16, m17)
+
+plot(m16)
 plotResiduals(m17)
-summary(m17) # explains 66.9% of deviance
+summary(m16) # explains 66.9% of deviance
 
-
+# Exploring how much data and time explain
 m18 <- gam(data = lssp,
-           Inside~s(scale(Temperature), bs="ts", k = 4) + s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
@@ -515,13 +533,119 @@ m18 <- gam(data = lssp,
 summary(m18) # 47.3% - date and time explains 19.6% of the deviance
 
 
+# Remove canopy
+m19 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Time), bs="cc") + # Time
+                  s(scale(julian), bs="ts", k = 6) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
 
+
+summary(m19) # 66.9% - canopy explains nothing
+
+# Volume
+m20 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + # Time
+                  s(scale(julian), bs="ts", k = 6) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+summary(m20) # 66.9
+
+
+# Enterance
+m21 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + # Time
+                  s(scale(julian), bs="ts", k = 6) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+summary(m21) # 66.9
+
+
+# Wind
+m22 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + # Time
+                  s(scale(julian), bs="ts", k = 6) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+summary(m22) # 66.3
+
+
+# Temp
+m23 <- gam(data = lssp,
+           Inside~s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + # Time
+                  s(scale(julian), bs="ts", k = 6) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+summary(m23) # 61.6 %
+
+
+
+
+# Making them linear terms
+m19 <- gam(data = lssp,
+           Inside~Temperature + # Weather 
+                  poly(Wind.Speed) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+m20 <- gam(data = lssp,
+           Inside~Temperature + # Weather 
+                  poly(Wind.Speed) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+summary(m20) # 45.7% - canopy explain 
+
+anova(m18,m19)
 # polynomial (wind) or linear (temp)
 # lme 
 # pq = 5 for corarma
+# take out terms and see how things are explained
+
+
+# making temp and wind linear terms didnt improve the model
+
+
+lme1 <- lme(data = lssp,
+                   Inside ~ Temperature + Wind.Speed + Enterance_Area + volume + Canopy,
+                   random = ~ 1|Burrow,
+                   corr = corARMA(p = 1, q = 1))
 
 
 
+
+ggplot(lssp, aes(x = scale(Canopy), y = scale(Inside))) +
+  geom_point()+
+    plottheme
 
 
 
@@ -582,7 +706,8 @@ summary(m2_puffin)
 
 
 
-# take out terms and see how things are explained
+plot(m17)
+
 ```
 
 ## MODEL - Predict drivers of burrow buffering capacity
@@ -691,7 +816,7 @@ heat_LSSP$Species <- "LSSP"
 
 # Join the two species together
 heat_LSSP$Burrow <- as.character(heat_LSSP$Burrow)
-heat_ATOU$Burrow <- as.character(heat_ATPU$Burrow)
+heat_ATPU$Burrow <- as.character(heat_ATPU$Burrow)
 cold_LSSP$Burrow <- as.character(cold_LSSP$Burrow)
 cold_ATPU$Burrow <- as.character(cold_ATPU$Burrow)
 
