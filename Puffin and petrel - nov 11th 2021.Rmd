@@ -406,6 +406,7 @@ lssp$Burrow <- factor(lssp$Burrow)
 
 ```
 
+
 ##______________________________________________________________
 ## 6. Modelling
 ##______________________________________________________________
@@ -690,11 +691,14 @@ summary(m17)
 atpu$Burrow <- as.factor(atpu$Burrow)
 
 m1_puffin <- gam(data = atpu,
-             Inside~s(scale(Temperature), bs="ts") + s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
-                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts")+ # Time and date
-                  s(Burrow, bs="re"), # random effect
-                  method = "REML") 
+             Inside~s(scale(Temperature), bs="ts") + 
+                    s(scale(Wind.Speed),bs="ts") +  # Environment
+                    s(scale(Enterance_Area),bs="ts") + 
+                    s(scale(volume),bs="ts") + # Burrow features
+                    s(scale(Time), bs="cc") + 
+                    s(scale(julian), bs="ts")+ # Time and date
+                    s(Burrow, bs="re"), # random effect
+                    method = "REML") 
 
 # Model checks
 vis.concurvity(m1_puffin)
@@ -710,11 +714,12 @@ summary(m1_puffin)
 # edf is close to 9 for temperature, entrance area, volume and julian date
 # so we will double the knots to 20
 m2_puffin <- gam(data = atpu,
-             Inside~s(scale(Temperature), bs="ts", k = 20) + # Environment
-                  s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts", k = 20) + # Burrow features
-                  s(scale(volume),bs="ts", k = 20) + # Burrow features
-                  s(scale(Time), bs="cc") + s(scale(julian), bs="ts", k = 20)+ # Time and date
+             Inside~s(scale(Temperature), bs="ts", k = 4) + # Environment
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Time), bs="cc") + 
+                  s(scale(julian), bs="ts")+ # Time and date
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
@@ -724,10 +729,24 @@ AIC(m1_puffin, m2_puffin) # m2 reduces the AIC
 vis.concurvity(m2_puffin)
 plot(m2_puffin)
 summary(m2_puffin)
+testResiduals(m2_puffin)
+
+vis.concurvity(m2_puffin)
+plotQQunif(m1_puffin)
+plotResiduals(m1_puffin)
+testDispersion(m1_puffin)
+testZeroInflation(m1_puffin)
+hist(resid(m2_puffin))
+plot(m1_puffin)
+summary(m1_puffin)
 
 
-
-plot(m17)
+# Visualise trends
+ggplot(atpu, aes(x = Wind.Speed, y = Inside)) +
+                  geom_point()+
+                  ylab(bquote(T[Buffer]~"(°C)"))+
+                  plottheme+
+                  theme(legend.position = "none")
 
 ```
 
@@ -850,15 +869,6 @@ heat_LSSP <- extreme_heat_LSSP %>% group_by(Burrow) %>%
 heat_LSSP$volume <- pi * (heat_LSSP$Width/2) * (heat_LSSP$Height/2) * heat_LSSP$Depth
 heat_LSSP$Species <- "LSSP"
 
-
-# Visualise trends
-ggplot(heat_LSSP, aes(x = Canopy, y = Buffer,med)) +
-                  geom_point()+
-                  ylab(bquote(T[Buffer]~"(°C)"))+
-                  plottheme+
-                  theme(legend.position = "none")
-
-
 ```
 
 
@@ -891,6 +901,13 @@ hist(resid(m2_heat_atpu))
 # Model summary
 summary(m2_heat_atpu)
 
+# Visualise trends
+ggplot(cold_ATPU, aes(x = log(volume), y = Buffer.med)) +
+                  geom_point()+
+                  ylab(bquote(T[Buffer]~"(°C)"))+
+                  plottheme+
+                  theme(legend.position = "none")
+
 ```
 
 
@@ -905,17 +922,21 @@ cold_ATPU <- cold_ATPU %>% drop_na()
 m1_cold_atpu <- gls(data = cold_ATPU, 
                    Buffer.med ~ volume + Enterance_Area)
 
-
-# Model summary
-summary(m1_cold_atpu)
-
 # Check model fit
 stats::qqnorm(m1_cold_atpu)
 plot(m1_cold_atpu)
 hist(resid(m1_cold_atpu))
 
-# visualise hist of data
-hist(cold_ATPU$Buffer)
+# Model summary
+summary(m1_cold_atpu)
+
+# Visualise trends
+ggplot(cold_ATPU, aes(x = volume, y = Buffer.med)) +
+                  geom_point()+
+                  ylab(bquote(T[Buffer]~"(°C)"))+
+                  plottheme+
+                  theme(legend.position = "none")
+
 ```
 
 ## PETREL - HEAT EXTREME MODEL
@@ -935,9 +956,12 @@ plot(m1_heat_lssp)
 # Model Summary
 summary(m1_heat_lssp)
 
-
-# visualise hist of data
-hist(log(heat_LSSP$Buffer))
+# Visualise trends
+ggplot(heat_LSSP, aes(x = Canopy, y = Buffer.med)) +
+                  geom_point()+
+                  ylab(bquote(T[Buffer]~"(°C)"))+
+                  plottheme+
+                  theme(legend.position = "none")
 
 ```
 
@@ -959,11 +983,6 @@ plot(m1_cold_lssp)
 # Model summary
 summary(m1_cold_lssp)
 
-
-ggplot(cold_LSSP, aes(x = Enterance_Area, y = Buffer)) +
-  geom_point()+
-  ylab(bquote(T[Buffer]~"(°C)"))+
-    plottheme
 
 ```
 
@@ -3061,16 +3080,35 @@ mean_puffin <- ATPU_LSSP %>% filter(Location == "Inside") %>%
   group_by(Burrow, Species) %>%
   summarise(var = var(temp))
 
+
 # The mean variation between the burrows
 mean_puffin %>% group_by(Species) %>%
   summarise(mean = mean(var),
             sd = sd(var))
 
-## The mean burrow temperatures
+# The mean burrow temperatures
 ATPU_LSSP %>% 
+  filter(!Burrow %in% c(1, 2, 3, 9, 15, 21, 27, 29)) %>%
   group_by(Species, Location) %>%
   summarise(mean = mean(temp),
-            sd = sd(temp))
+            sd = sd(temp),
+            max = max(temp),
+            min = min(temp))
+
+
+# Summarise the weather data
+weather %>% group_by(Station) %>%
+  summarise(sd = sd(Temperature))
+
+# Summarise the buffering
+extreme %>%
+  group_by(Species, Extreme) %>%
+  summarise(mean = mean(buffer_kestrel), 
+            sd = sd(buffer_kestrel),
+            meanlog = mean(buffer_logger, na.rm=TRUE),
+            sdlog = sd(buffer_logger, na.rm=TRUE))
+            
+
 ```
 
 ## Calculate the circular mean and SD for burrow orientation
@@ -3129,6 +3167,9 @@ Run a change point analysis with package `changepoint` which finds changes in me
 
 library(changepoint)
 
+# Filter burrows that can't be used for the analysis
+ATPU_LSSP <- ATPU_LSSP %>% filter(!Burrow %in% c(1, 2, 3, 9, 15, 21, 27, 29))
+
 # Filter the data
 puffin <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin")
 petrel <- filter(ATPU_LSSP, Location == "Inside" & Species == "Leach's storm-petrel")
@@ -3179,11 +3220,11 @@ puffincpt$Date <- x$Date[puffincpt$cpt]
 # 04/08/2021 - 08/08/2021 - heat extreme 1 range
 # 14/08/2021 - heat extreme 2 beginning
 
-# Heat extreme 1 = 21/24 burrows 
+# Heat extreme 1 = 20/23 burrows 
 cptsummary <- puffincpt %>% filter(Date >= "2021-08-04") %>% 
   filter(Date <= "2021-08-08") %>% distinct(burrow, .keep_all = TRUE)
 
-# Heat extreme 2 = 1/24 burrows 
+# Heat extreme 2 = 1/23 burrows 
 cptsummary <- puffincpt %>% filter(Date >= "2021-08-14") %>% 
   distinct(burrow, .keep_all = TRUE)
 
