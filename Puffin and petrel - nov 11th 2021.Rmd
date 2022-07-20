@@ -492,6 +492,9 @@ plot(m17)
 
 summary(m14) # edf is close to 9 for temperature and julian date, so we will double the knots to 20
 
+# Information on bs = ts:
+# https://stat.ethz.ch/R-manual/R-devel/library/mgcv/html/smooth.construct.tp.smooth.spec.html?fbclid=IwAR190DaxZpNNYVPhjDnQCPJx9cjDY2Ar3OFPRQNQiGZMMX1STumBjVR_aBw
+
 m17 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
@@ -513,6 +516,24 @@ m16 <- gam(data = lssp,
                   s(scale(julian), k = 6) + # Date
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
+
+## The GAMM model to compare
+# Produced effectively equivenet outputs but the fit was worse
+m2 <- gamm(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + # Time
+                  s(scale(julian), bs="ts", k = 6), # Date
+                  random=list(Burrow=~1), # random effect
+                  method = "REML") 
+
+plot(m2$lme)
+hist(resid(m2))
+
+
 
 anova(m16, m17)
 
@@ -838,13 +859,16 @@ extreme_heat_ATPU$Burrow <- as.character(extreme_heat_ATPU$Burrow)
 
 
 
+# Visualise trends
+ggplot(cold_ATPU, aes(x = log(volume), y = Buffer)) +
+                  geom_point()+
+                  ylab(bquote(T[Buffer]~"(°C)"))+
+                  plottheme+
+                  theme(legend.position = "none")
 
-ggplot(heat_LSSP, aes(x = Height, y = Buffer)) +
-  geom_point()+
-  ylab(bquote(T[Buffer]~"(°C)"))+
-  #geom_hline(yintercept = 0, linetype="dashed", size = 1)+
-    plottheme+
-  theme(legend.position = "none")
+
+
+
 
 
 
@@ -854,25 +878,41 @@ ggplot(heat_LSSP, aes(x = Height, y = Buffer)) +
 
 heat_ATPU <- heat_ATPU %>% drop_na()
 
-m1_heat_atpu <- gls(data = heat_ATPU, 
-                   Buffer ~ volume + Enterance_Area)
 
+# Build model
+m1_heat_atpu <- gls(data = heat_ATPU, 
+                   Buffer ~ log(volume) + log(Enterance_Area))
+
+# Model summary
 summary(m1_heat_atpu)
 
+# Check model fit
+stats::qqnorm(m1_heat_atpu)
+plot(m1_heat_atpu)
 hist(resid(m1_heat_atpu))
 
-hist(cold_ATPU$Buffer)
+# visualise hist of data
+hist(log(heat_ATPU$Enterance_Area))
 
 
 ## PUFFIN - COLD EXTREME
 
 cold_ATPU <- cold_ATPU %>% drop_na()
 
+# Build model
 m1_cold_atpu <- gls(data = cold_ATPU, 
                    Buffer ~ volume + Enterance_Area)
 
+# Model summary
 summary(m1_cold_atpu)
 
+# Check model fit
+stats::qqnorm(m1_cold_atpu)
+plot(m1_cold_atpu)
+hist(resid(m1_cold_atpu))
+
+# visualise hist of data
+hist(cold_ATPU$Buffer)
 
 
 ## PETREL - HEAT EXTREME
@@ -880,20 +920,36 @@ summary(m1_cold_atpu)
 m1_heat_lssp <- gls(data = heat_LSSP, 
                    Buffer ~ log(Canopy) + volume + log(Enterance_Area))
 
+m1_heat_lssp <- gls(data = heat_LSSP, 
+                   Buffer ~ Canopy + volume + Enterance_Area)
+
+# Model Summary
 summary(m1_heat_lssp)
 
+# Check model fit
+stats::qqnorm(m1_heat_lssp)
+hist(resid(m1_heat_lssp))
 plot(m1_heat_lssp)
 
 
 ## PETREL - COLD EXTREME
+
+# Build model
 m1_cold_lssp <- gls(data = cold_LSSP, 
                    Buffer ~  Canopy + volume + Enterance_Area)
 
+# Model summary
 summary(m1_cold_lssp)
 
 
+# Check model fit
+stats::qqnorm(m1_cold_lssp)
+hist(resid(m1_cold_lssp))
+plot(m1_cold_lssp)
 
-ggplot(heat_LSSP, aes(x = Canopy, y = Buffer)) +
+
+
+ggplot(heat_LSSP, aes(x = log(Canopy), y = Buffer)) +
   geom_point()+
   ylab(bquote(T[Buffer]~"(°C)"))+
   #geom_hline(yintercept = 0, linetype="dashed", size = 1)+
