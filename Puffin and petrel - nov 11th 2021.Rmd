@@ -3107,7 +3107,27 @@ extreme %>%
             sd = sd(buffer_kestrel),
             meanlog = mean(buffer_logger, na.rm=TRUE),
             sdlog = sd(buffer_logger, na.rm=TRUE))
+
+
+
+# Explore the extreme temperature range to see whether it is comparable between the species
+extreme %>%
+  group_by(Species, Extreme) %>%
+  summarise(mean = mean(Temperature), 
+            sd = sd(Temperature))
             
+
+ggplot(extreme, aes(x = Species, y = Temperature)) +
+  geom_boxplot( aes(fill = buffer_kestrel>0))+
+  scale_fill_manual(values = c( "#E16E08", "#89B4C7"))+
+  ylab(bquote(T[Buffer]~"(°C)"))+ xlab("Thermal Event")+
+  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        axis.title.x = element_text(vjust = -1))+
+  theme(legend.position = "none")+
+  facet_wrap(~Extreme, scales = "free_y")+
+  theme(strip.text = element_text(size = 16, color = "white", face = "bold"), 
+        strip.background = element_rect(fill="black"))
 
 ```
 
