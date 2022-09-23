@@ -443,7 +443,7 @@ pairs.panels(model_df_short[,c(7,8,9,12:18, 21, 24)],
              method = "pearson")
              
              
-## MODEL - Predict drivers of burrow microclimate
+## MODEL - Predict drivers of burrow microclimate (Notes)
 
 ```{r}
 
@@ -519,7 +519,7 @@ m16 <- gam(data = lssp,
                   method = "REML") 
 
 ## The GAMM model to compare
-# Produced effectively equivenet outputs but the fit was worse
+# Produced effectively equivalent outputs but the fit was worse
 m2 <- gamm(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
@@ -750,7 +750,48 @@ ggplot(atpu, aes(x = Wind.Speed, y = Inside)) +
 
 ```
 
-## MODEL - Predict drivers of burrow buffering capacity
+## PETREL
+## MODEL - Predict drivers of burrow microclimate
+
+```{r}
+
+# Explore model fit with `DHARMa` package
+# https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html
+library(DHARMa); library(lme4); library(mgcViz); library(mgcv)
+
+
+# Run the model
+m1 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(scale(Time), bs="cc") + # Time
+                  s(scale(julian), bs="ts", k = 6) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+# Model results
+summary(m1)
+
+# Concurvity
+vis.concurvity(m1)
+
+## RUN WITHOUT THE EXTRA TESTS ***********************
+# DHARMa package residual exploration
+testResiduals(m1)
+
+# Hist of residuals
+hist(resid(m1))
+
+# Plot output
+plot(m1)
+
+```
+
+
+## MODEL - Predict drivers of burrow buffering capacity (not used)
 
 ```{r}
 ## PETREL
@@ -3128,6 +3169,7 @@ ggplot(extreme, aes(x = Species, y = Temperature)) +
   facet_wrap(~Extreme, scales = "free_y")+
   theme(strip.text = element_text(size = 16, color = "white", face = "bold"), 
         strip.background = element_rect(fill="black"))
+
 
 ```
 
