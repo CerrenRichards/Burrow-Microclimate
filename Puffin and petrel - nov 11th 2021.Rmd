@@ -772,21 +772,110 @@ m1 <- gam(data = lssp,
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
-# Model results
-summary(m1)
 
-# Concurvity
-vis.concurvity(m1)
+# without scaled date and time
+m2 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 6) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+windmean <- lssp %>% group_by(julian) %>% summarise(wind = mean(Wind.Speed))
+
+## INITIAL MODEL
+## R2 - 0.674
+## REML = 73570
+m4 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + # Weather 
+                  s(scale(Wind.Speed),bs="ts") +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts") + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+## Explore weather variable as linear terms 
+## Linear terms increase the AIC score
+## R2 = 0.67
+## REML = 73938
+m5 <- gam(data = lssp,
+           Inside~Temperature + # Weather 
+                  Wind.Speed +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts") + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML")
+
+
+## Changing the knots
+## R2 = 0.673
+## REML = 73676
+m3 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts") + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+# Increase knots
+m6 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + # Weather 
+                  s(scale(Wind.Speed),bs="ts", k = 5) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts") + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+# Increase knots
+m7 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + # Weather 
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts") + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+AIC(m4, m3, m6, m7) # m2 reduces the AIC
+
+
+# Model results
+summary(m7)
+
+# Visualise concurvity of the model
+library(dsm)
+vis.concurvity(m4)
 
 ## RUN WITHOUT THE EXTRA TESTS ***********************
 # DHARMa package residual exploration
-testResiduals(m1)
+testResiduals(m2)
 
 # Hist of residuals
-hist(resid(m1))
+hist(resid(m4))
 
 # Plot output
-plot(m1)
+plot(m6)
 
 ```
 
