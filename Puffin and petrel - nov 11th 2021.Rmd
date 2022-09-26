@@ -519,6 +519,10 @@ m16 <- gam(data = lssp,
                   method = "REML") 
 
 ## The GAMM model to compare
+
+#Comparing the `gam` model with burrow as a random effect spline against a `gamm` model  produced #effectively equivalent model outputs. However, we selected the `gam` model because it allows for #tests of random effect terms against a null of 0 variance and was also a better fit than the `gamm` #model. 
+
+
 # Produced effectively equivalent outputs but the fit was worse
 m2 <- gamm(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
@@ -755,41 +759,14 @@ ggplot(atpu, aes(x = Wind.Speed, y = Inside)) +
 
 ```{r}
 
-# Explore model fit with `DHARMa` package
-# https://cran.r-project.org/web/packages/DHARMa/vignettes/DHARMa.html
-library(DHARMa); library(lme4); library(mgcViz); library(mgcv)
+# Load the packages
+library(DHARMa); library(lme4); library(mgcViz); library(mgcv); library(dsm)
 
 
-# Run the model
-m1 <- gam(data = lssp,
-           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
-                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
-                  s(scale(volume),bs="ts") + # Burrow features
-                  s(scale(Canopy), bs="ts") + # Habitat
-                  s(scale(Time), bs="cc") + # Time
-                  s(scale(julian), bs="ts", k = 6) + # Date
-                  s(Burrow, bs="re"), # random effect
-                  method = "REML") 
-
-
-# without scaled date and time
-m2 <- gam(data = lssp,
-           Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
-                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
-                  s(scale(volume),bs="ts") + # Burrow features
-                  s(scale(Canopy), bs="ts") + # Habitat
-                  s(Time, bs="cc") + # Time
-                  s(julian, bs="ts", k = 6) + # Date
-                  s(Burrow, bs="re"), # random effect
-                  method = "REML") 
-
-windmean <- lssp %>% group_by(julian) %>% summarise(wind = mean(Wind.Speed))
-
-## INITIAL MODEL
-## R2 - 0.674
+# Run the initial model
+## R-sq = 0.674
 ## REML = 73570
+## AIC = 146784.5
 m4 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
@@ -801,10 +778,56 @@ m4 <- gam(data = lssp,
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
-## Explore weather variable as linear terms 
-## Linear terms increase the AIC score
-## R2 = 0.67
+# Model results
+summary(m1)
+
+# Visualise concurvity of the model
+vis.concurvity(m1)
+
+# DHARMa package residual exploration
+testResiduals(m1)
+
+# Hist of residuals
+hist(resid(m1))
+
+# Plot output
+plot(m1)
+
+
+## The GAMM model to compare
+# Comparing the `gam` model with burrow as a random effect spline against a `gamm` model  produced effectively equivalent model outputs. However, we selected the `gam` model because it allows for tests of random effect terms against a null of 0 variance.
+m8 <- gamm(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + # Weather 
+                  s(scale(Wind.Speed),bs="ts") +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts"), # Date
+                  random=list(Burrow=~1), # random effect
+                  method = "REML") 
+
+# Model summary
+summary(m8$gam)
+
+# Fit
+hist(resid(m8$gam))
+plot(m8$lme)
+
+# Plots
+plot.gam(m8$gam)
+
+
+# Wind speed and temperature appear to show a linear response
+# We will therefore run the following model with them as linear terms
+plot(lssp$Wind.Speed, lssp$Inside)
+plot(lssp$Temperature, lssp$Inside)
+
+## Explore weather variables as linear terms 
+## Linear terms decrease the model fit:
+## R-sq = 0.67
 ## REML = 73938
+## AIC = 147572.9
 m5 <- gam(data = lssp,
            Inside~Temperature + # Weather 
                   Wind.Speed +  # Weather
@@ -816,10 +839,23 @@ m5 <- gam(data = lssp,
                   s(Burrow, bs="re"), # random effect
                   method = "REML")
 
+# Model results
+summary(m2)
 
-## Changing the knots
-## R2 = 0.673
+# Model fit
+vis.concurvity(m2)
+testResiduals(m2)
+hist(resid(m2))
+
+# Plot
+plot(m2)
+
+
+# Changing the knots of the initial model to explore whether this improves the fit
+# Improvement from the linear terms, but not from the initial model:
+## R-sq = 0.673
 ## REML = 73676
+## AIC = 147046.9
 m3 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
@@ -831,8 +867,21 @@ m3 <- gam(data = lssp,
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
+# Model results
+summary(m3)
 
-# Increase knots
+# Model fit
+vis.concurvity(m3)
+testResiduals(m3)
+hist(resid(m3))
+
+# Plot
+plot(m3)
+
+
+# Explore changes in knots for only the wind speed term
+# because there is a slight inflection upwards in the previous models
+# for wind speed due to lack of data at higher wind speeds
 m6 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 5) +  # Weather
@@ -844,7 +893,18 @@ m6 <- gam(data = lssp,
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
-# Increase knots
+# Model results
+summary(m4)
+
+# Model fit
+vis.concurvity(m4)
+testResiduals(m4)
+hist(resid(m4))
+
+# Plot
+plot(m4)
+
+# Decrease knots to reduce the inflection at higher wind speeds
 m7 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
@@ -857,25 +917,19 @@ m7 <- gam(data = lssp,
                   method = "REML") 
 
 
-AIC(m4, m3, m6, m7) # m2 reduces the AIC
-
-
 # Model results
-summary(m7)
+summary(m5)
 
-# Visualise concurvity of the model
-library(dsm)
-vis.concurvity(m4)
+# Model fit
+vis.concurvity(m5)
+testResiduals(m5)
+hist(resid(m5))
 
-## RUN WITHOUT THE EXTRA TESTS ***********************
-# DHARMa package residual exploration
-testResiduals(m2)
+# Plot
+plot(m5)
 
-# Hist of residuals
-hist(resid(m4))
-
-# Plot output
-plot(m6)
+# Compare the AIC scores
+AIC(m1, m2, m3, m4, m5) 
 
 ```
 
