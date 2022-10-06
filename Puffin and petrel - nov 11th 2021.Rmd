@@ -3,6 +3,8 @@ title: '"Puffin and Petrel 2021 - Nov 11th 2021"'
 author: "Cerren Richards"
 date: "11/11/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -779,7 +781,7 @@ m4 <- gam(data = lssp,
                   method = "REML") 
 
 # Model results
-summary(m1)
+summary(m4)
 
 # Visualise concurvity of the model
 vis.concurvity(m1)
@@ -879,6 +881,8 @@ hist(resid(m3))
 plot(m3)
 
 
+
+
 # Explore changes in knots for only the wind speed term
 # because there is a slight inflection upwards in the previous models
 # for wind speed due to lack of data at higher wind speeds
@@ -931,6 +935,383 @@ plot(m5)
 # Compare the AIC scores
 AIC(m1, m2, m3, m4, m5) 
 
+
+m9 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + # Weather 
+                  s(scale(Wind.Speed),bs="ts") +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc", k = 20) + # Time
+                  s(julian, bs="ts", k = 20) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+m10 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + # Weather 
+                  s(scale(Wind.Speed),bs="ts") +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc", k = 12) + # Time
+                  s(julian, bs="ts", k = 15) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+m11 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + # Weather 
+                  s(scale(Wind.Speed),bs="ts") +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc", k = 10) + # Time
+                  s(julian, bs="ts", k = 12) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+
+m12 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 20) + # Weather 
+                  s(scale(Wind.Speed),bs="ts") +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 20) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+
+m13 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 40) + # Weather 
+                  s(scale(Wind.Speed),bs="ts") +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 20) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+
+m14 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts", k = 20) + # Weather 
+                  s(scale(Wind.Speed),bs="ts") +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 40) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+m15 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + # Weather 
+                  s(scale(Wind.Speed),bs="ts") +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 40) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+m16 <- gam(data = lssp,
+           Inside~s(scale(Temperature), bs="ts") + # Weather 
+                  s(scale(Wind.Speed),bs="ts") +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 20) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+
+
+# Aic
+# Does it change the others
+# Dharma - test.autocorrelation ??
+
+AIC(m4, m12, m13, m14, m15, m16) 
+
+summary(m16)
+
+plot(m15)
+```
+
+## PUFFIN
+## MODEL - Predict drivers of burrow microclimate
+
+```{r}
+## Predict drivers of burrow microclimate
+## PUFFIN
+
+# Define the burrow ID as a character 
+atpu$Burrow <- as.factor(atpu$Burrow)
+
+# Build initial model
+## R-sq = 0.642
+## REML =  49391
+m1_puffin <- gam(data = atpu,
+             Inside~s(scale(Temperature), bs="ts") + # Weather
+                    s(scale(Wind.Speed), bs="ts") +  # Weather
+                    s(scale(Enterance_Area), bs="ts") + # Burrow
+                    s(scale(volume), bs="ts") + # Burrow features
+                    s(Time, bs="cc") + # Time and date
+                    s(julian, bs="ts")+ # Time and date
+                    s(Burrow, bs="re"), # random effect
+                    method = "REML") 
+
+# Model results
+summary(m1_puffin)
+
+# Model fit
+vis.concurvity(m1_puffin)
+testResiduals(m1_puffin)
+hist(resid(m1_puffin))
+
+# Plot
+plot(m1_puffin)
+
+plot(atpu$Wind.Speed, atpu$Inside)
+plot(atpu$Temperature, atpu$Inside)
+
+
+
+# edf is close to 9 for temperature, entrance area, volume and julian date
+# so we will double the knots to 20
+m2_puffin <- gam(data = atpu,
+             Inside~s(scale(Temperature), bs="ts", k = 4) + # Environment
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+# Filtering the higher wind speeds
+plot(atpu$Temperature, atpu$Inside)
+atpu.wind <- atpu %>% filter(Wind.Speed < 30)
+plot(atpu.wind$Wind.Speed, atpu.wind$Inside)
+
+m1.2_puffin <- gam(data = atpu.wind,
+             Inside~s(scale(Temperature), bs="ts") + # Weather
+                    s(scale(Wind.Speed), bs="ts") +  # Weather
+                    s(scale(Enterance_Area), bs="ts") + # Burrow
+                    s(scale(volume), bs="ts") + # Burrow features
+                    s(Time, bs="cc") + # Time and date
+                    s(julian, bs="ts")+ # Time and date
+                    s(Burrow, bs="re"), # random effect
+                    method = "REML") 
+
+
+m1.3_puffin <- gam(data = atpu.wind,
+             Inside~s(scale(Temperature), bs="ts") + # Weather
+                    s(scale(Wind.Speed), bs="ts") +  # Weather
+                    s(scale(Enterance_Area), bs="ts") + # Burrow
+                    s(scale(volume), bs="ts") + # Burrow features
+                    s(Time, bs="cc") + # Time and date
+                    s(julian, bs="ts", k = 20)+ # Time and date
+                    s(Burrow, bs="re"), # random effect
+                    method = "REML") 
+
+
+m1.4_puffin <- gam(data = atpu.wind,
+             Inside~s(scale(Temperature), bs="ts") + # Weather
+                    s(scale(Wind.Speed), bs="ts") +  # Weather
+                    s(scale(Enterance_Area), bs="ts") + # Burrow
+                    s(scale(volume), bs="ts") + # Burrow features
+                    s(Time, bs="cc") + # Time and date
+                    s(julian, bs="ts", k = 40)+ # Time and date
+                    s(Burrow, bs="re"), # random effect
+                    method = "REML") 
+
+
+
+m5_puffin <- gam(data = atpu,
+             Inside~s(scale(Temperature), bs="ts") + # Environment
+                  s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts", k = 20)+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+m5.0_puffin <- gam(data = atpu,
+             Inside~s(scale(Temperature), bs="ts") + # Environment
+                  s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+plot(m5.0_puffin)
+
+
+
+m5.1_puffinAEB <- gam(data = atpu,
+             Inside~scale(Temperature) + scale(Temperature) : scale(Wind.Speed) + # Environment
+               s(scale(Wind.Speed)) +
+                  scale(Enterance_Area) + # Burrow features
+                  scale(volume) + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts", k = 5)+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+
+# Modeling the effects left over
+m5.1_puffinAEB <- gam(data = atpu.wind,
+             Inside~scale(Temperature) + scale(Temperature) : scale(Wind.Speed) + # Environment
+               s(scale(Wind.Speed)) +
+                  scale(Enterance_Area) + # Burrow features
+                  scale(volume) + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts", k = 5)+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+
+
+
+m5.2_puffinAEB <- gam(data = atpu.wind,
+             Inside~ scale(Temperature) * scale(Wind.Speed) + # Environment
+                  scale(Enterance_Area) + # Burrow features
+                  scale(volume) + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts", k = 5)+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+# gam to justify fitting a linear term 
+# constructed with particular criteria 
+
+m5.0_puffinAEB <- gam(data = atpu.wind,
+             Inside~scale(Temperature) * scale(Wind.Speed) + # Environment
+                  scale(Enterance_Area) + # Burrow features
+                  scale(volume) + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+plot(m5.0_puffinAEB)
+summary(m5.0_puffinAEB)
+
+plot(atpu$Temperature, atpu$Wind.Speed)
+plot(atpu$Wind.Speed, atpu$Temperature)
+
+
+vis.gam(m5.0_puffinAEB, view = c("Temperature", "Wind.Speed"), plot.type = "contour")
+
+vis.gam(m5.0_puffinAEB, view = c("Temperature", "Wind.Speed"),
+    theta = 100, n.grid = 40, lwd = 0.4)
+
+plot(m5.0_puffinAEB, scheme = 2)
+
+predict.gam()
+
+# predict
+
+m6_puffin <- gam(data = atpu,
+             Inside~s(scale(Temperature), bs="ts") + # Environment
+                  s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts", k = 40)+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+
+m3_puffin <- gam(data = atpu,
+             Inside~s(scale(Temperature), bs="ts") + # Environment
+                  s(scale(Wind.Speed),bs="ts", k = 4) +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+m4_puffin <- gam(data = atpu,
+             Inside~s(scale(Temperature), bs="ts", k = 4) + # Environment
+                  s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+m4_puffin <- gam(data = atpu,
+             Inside~s(scale(Temperature), bs="ts", k = 4) + # Environment
+                  s(scale(Wind.Speed),bs="ts") +  # Environment
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+# model checks
+AIC(m1_puffin, m2_puffin, m3_puffin, m4_puffin) 
+AIC(m1.2_puffin, m1.3_puffin) 
+plot(m1.3_puffin)
+summary(m5_puffin)
+
+gam.check(m5_puffin)
+
+vis.concurvity(m1_puffin)
+plot(m1.2_puffin)
+summary(m1.2_puffin)
+testResiduals(m2_puffin)
+
+vis.concurvity(m2_puffin)
+plotQQunif(m1_puffin)
+plotResiduals(m1_puffin)
+testDispersion(m1_puffin)
+testZeroInflation(m1_puffin)
+hist(resid(m2_puffin))
+plot(m1_puffin)
+summary(m1_puffin)
+
+
+atpu$datetime2 <- as.POSIXct(atpu$datetime, format='%Y-%m-%d %H:%M')
+
+
+
+# Vis.gam interaction
+# gam to justify fitting a linear term 
+# constructed with particular criteria 
+# look at predict.gam
+## specify as time or use unique nums
+# re for daytime, or just day
+res = simulateResiduals(m5_puffin)
+res = recalculateResiduals(res, group = atpu$datetime2)
+
+testTemporalAutocorrelation(res, time = unique(atpu$datetime2))
+
+
+
 ```
 
 
@@ -972,6 +1353,79 @@ summary(m2_buff)
 
 
 
+
+
+## Filtering the extremes
+```{r}
+
+## Identify the extreme events
+## Here we define "extreme" as the 1 and 99 percentiles
+quant_weather <- model_df_short %>%
+  group_by(Species) %>%
+  summarise(quantile1 = quantile(Temperature, c(.01), na.rm = T),
+            quantile99 = quantile(Temperature, c(.99), na.rm = T))
+
+
+## Filter out the extreme temperatures (Leach's)
+## COLD
+extreme_cold_LSSP <- filter(model_df_short, Temperature <= 6.5 & Species == "Leach's storm-petrel")
+extreme_cold_LSSP$Extreme <- "Cold Extreme"
+
+## Mean and SD for weather station buffering
+mean(extreme_cold_LSSP$buffer_kestrel) # 7.3838 deg C
+sd(extreme_cold_LSSP$buffer_kestrel) #1.214295
+
+## Mean and SD for external burrow logger buffering
+mean(extreme_cold_LSSP$buffer_logger) # 6.83 deg C
+sd(extreme_cold_LSSP$buffer_logger) #1.34
+
+## HOT
+extreme_heat_LSSP <- filter(model_df_short, Temperature >= 25.7 & Species == "Leach's storm-petrel")
+extreme_heat_LSSP$Extreme <- "Heat Extreme"
+
+## Mean and SD for weather station buffering
+mean(extreme_heat_LSSP$buffer_kestrel) #-9.437 deg C
+sd(extreme_heat_LSSP$buffer_kestrel) # 1.409367
+
+## Mean and SD for external burrow logger buffering
+mean(extreme_heat_LSSP$buffer_logger) # -8.274 C
+sd(extreme_heat_LSSP$buffer_logger) #3.461
+
+
+## Filter out the extreme temperatures (Puffin)
+## COLD
+extreme_cold_ATPU <- filter(model_df_short, Temperature <= 10 & Species == "Atlantic puffin")
+extreme_cold_ATPU$Extreme <- "Cold Extreme"
+
+## Mean and SD for weather station buffering
+mean(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 8.049758 deg C
+sd(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 1.534774
+
+## Mean and SD for external burrow logger buffering
+mean(extreme_cold_ATPU$buffer_logger, na.rm = T) # 7.75 deg C
+sd(extreme_cold_ATPU$buffer_logger, na.rm = T) # 2.064
+
+## HOT
+extreme_heat_ATPU <- filter(model_df_short, Temperature >= 25.6 & Species == "Atlantic puffin")
+extreme_heat_ATPU$Extreme <- "Heat Extreme"
+
+## Mean and SD for weather station buffering
+mean(extreme_heat_ATPU$buffer_kestrel, na.rm = T) # -5.385507 deg C
+sd(extreme_heat_ATPU$buffer_kestrel, na.rm = T) #1.81329
+
+## Mean and SD for external burrow logger buffering
+mean(extreme_heat_ATPU$buffer_logger, na.rm = T) # -13 deg C
+sd(extreme_heat_ATPU$buffer_logger, na.rm = T) # 5.61
+
+## Join the dataframes
+extreme <- rbind(extreme_cold_LSSP, extreme_heat_LSSP, 
+                 extreme_cold_ATPU, extreme_heat_ATPU)
+
+```
+
+
+
+
 ## MODEL - Overperforming burrows
 
 Here we build two models for each species: one for the extreme cold and one for the extreme warm events. 
@@ -980,6 +1434,7 @@ We first calculate the mean buffering temperature per burrow during extreme even
 
 
 Mean buffering temperature was included as the dependent variable. Burrow characteristics (entrance area, volume) and canopy cover (Leach's storm-petrels only) were included as predictors.
+
 
 ```{r}
 
@@ -1063,6 +1518,16 @@ heat_LSSP$Species <- "LSSP"
 # so we will remove this burrow from the analysis
 heat_ATPU <- heat_ATPU %>% drop_na()
 
+
+# Build initial model
+m0_heat_atpu <- lm(data = heat_ATPU, 
+                   Buffer.med ~ volume + Enterance_Area)
+# Check model fit - Not a good fit
+stats::qqnorm(m0_heat_atpu)
+plot(m0_heat_atpu)
+hist(resid(m0_heat_atpu))
+summary(m0_heat_atpu)
+
 # Build initial model
 m1_heat_atpu <- gls(data = heat_ATPU, 
                    Buffer.med ~ volume + Enterance_Area)
@@ -1071,9 +1536,10 @@ m1_heat_atpu <- gls(data = heat_ATPU,
 stats::qqnorm(m1_heat_atpu)
 plot(m1_heat_atpu)
 hist(resid(m1_heat_atpu))
+summary(m1_heat_atpu)
 
 # Transform the predictors
-m2_heat_atpu <- gls(data = heat_ATPU, 
+m2_heat_atpu <- lm(data = heat_ATPU, 
                    Buffer.med ~ log(volume) + log(Enterance_Area))
 
 # Check model fit 
@@ -1787,42 +2253,6 @@ ggsave("avg_temp_plot_legend.png",
 ## Fig 5 - Buffering temperature plot
 
 ```{r}
-
-## Identify the extreme events
-## Here we define "extreme" as the 1 and 99 percentiles
-quant_weather <- model_df_short %>%
-  group_by(Species) %>%
-  summarise(quantile1 = quantile(Temperature, c(.01), na.rm = T),
-            quantile99 = quantile(Temperature, c(.99), na.rm = T))
-
-
-## Filter out the extreme temperatures (Leach's)
-extreme_cold_LSSP <- filter(model_df_short, Temperature <= 6.5 & Species == "Leach's storm-petrel")
-extreme_cold_LSSP$Extreme <- "Cold Extreme"
-mean(extreme_cold_LSSP$buffer_kestrel) # 7.3838 deg C
-sd(extreme_cold_LSSP$buffer_kestrel) #1.214295
-
-extreme_heat_LSSP <- filter(model_df_short, Temperature >= 25.7 & Species == "Leach's storm-petrel")
-extreme_heat_LSSP$Extreme <- "Heat Extreme"
-mean(extreme_heat_LSSP$buffer_kestrel) #-9.437 deg C
-sd(extreme_heat_LSSP$buffer_kestrel) # 1.409367
-
-## Filter out the extreme temperatures (Puffin)
-extreme_cold_ATPU <- filter(model_df_short, Temperature <= 10 & Species == "Atlantic puffin")
-extreme_cold_ATPU$Extreme <- "Cold Extreme"
-mean(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 8.049758 deg C
-sd(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 1.534774
-
-extreme_heat_ATPU <- filter(model_df_short, Temperature >= 25.6 & Species == "Atlantic puffin")
-extreme_heat_ATPU$Extreme <- "Heat Extreme"
-mean(extreme_heat_ATPU$buffer_kestrel, na.rm = T) # -5.385507 deg C
-sd(extreme_heat_ATPU$buffer_kestrel, na.rm = T) #1.81329
-
-
-## Join the dataframes
-extreme <- rbind(extreme_cold_LSSP, extreme_heat_LSSP, 
-                 extreme_cold_ATPU, extreme_heat_ATPU)
-
 
 # Create the box plots representing the extremes
 extremeplot <- ggplot(extreme, aes(x = Extreme, y = buffer_kestrel)) +
