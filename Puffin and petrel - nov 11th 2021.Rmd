@@ -1186,11 +1186,11 @@ m5.1_puffinAEB <- gam(data = atpu.wind,
                   method = "REML") 
 
 
-
+plot(m5.1_puffinAEB)
 
 
 m5.2_puffinAEB <- gam(data = atpu.wind,
-             Inside~ scale(Temperature) * scale(Wind.Speed) + # Environment
+             Inside ~ scale(Temperature) * scale(Wind.Speed) + # Environment
                   scale(Enterance_Area) + # Burrow features
                   scale(volume) + # Burrow features
                   s(Time, bs="cc") + 
@@ -1199,8 +1199,31 @@ m5.2_puffinAEB <- gam(data = atpu.wind,
                   method = "REML") 
 
 
+
+m1_puffin <- gam(data = atpu,
+             Inside~s(scale(Temperature), bs="ts") + # Weather
+                    s(scale(Wind.Speed), bs="ts") +  # Weather
+                    s(scale(Enterance_Area), bs="ts") + # Burrow
+                    s(scale(volume), bs="ts") + # Burrow features
+                    s(Time, bs="cc") + # Time and date
+                    s(julian, bs="ts")+ # Time and date
+                    s(Burrow, bs="re"), # random effect
+                    method = "REML") 
+
 # gam to justify fitting a linear term 
 # constructed with particular criteria 
+AIC(m1_puffin,m5.0_puffinAEB, m6.0_puffinAEB, m6.1_puffinAEB)
+
+m6.1_puffinAEB <- gam(data = atpu.wind,
+             Inside~s(scale(Temperature), scale(Wind.Speed)) +
+                  s(scale(Enterance_Area), bs="ts") + # Burrow
+                  s(scale(volume), bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
 
 m5.0_puffinAEB <- gam(data = atpu.wind,
              Inside~scale(Temperature) * scale(Wind.Speed) + # Environment
@@ -1212,17 +1235,88 @@ m5.0_puffinAEB <- gam(data = atpu.wind,
                   method = "REML") 
 
 
-plot(m5.0_puffinAEB)
-summary(m5.0_puffinAEB)
+m9.0_puffinAEB <- gam(data = atpu.wind,
+             Inside~Temperature * Wind.Speed + # Environment
+                  scale(Enterance_Area) + # Burrow features
+                  scale(volume) + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+
+## THIS MODEL FOR LINEAR
+m6.0_puffinAEB <- gam(data = atpu.wind,
+             Inside~scale(Temperature) * scale(Wind.Speed) + # Environment
+                  s(scale(Enterance_Area), bs="ts") + # Burrow
+                  s(scale(volume), bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+m7_puffinAEB <- gam(data = atpu.wind,
+             Inside~s(Temperature, Wind.Speed) +
+                  s(scale(Enterance_Area), bs="ts") + # Burrow
+                  s(scale(volume), bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+m7.2_puffinAEB <- gam(data = atpu.wind,
+             Inside~s(Temperature, Wind.Speed, k = 60) +
+                  s(scale(Enterance_Area), bs="ts") + # Burrow
+                  s(scale(volume), bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+
+m8.0_puffinAEB <- gam(data = atpu.wind,
+             Inside~s(Temperature, Wind.Speed)  + # Environment
+                  scale(Enterance_Area) + # Burrow features
+                  scale(volume) + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+
+m8.1_puffinAEB <- gam(data = atpu.wind,
+             Inside~s(Temperature, Wind.Speed, k = 60)  + # Environment
+                  scale(Enterance_Area) + # Burrow features
+                  scale(volume) + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+plot(m7.2_puffinAEB, scheme = 2)
+
+gam.check(m7.2_puffinAEB)
+plot(m7_puffinAEB)
+summary(m6.1_puffinAEB)
 
 plot(atpu$Temperature, atpu$Wind.Speed)
-plot(atpu$Wind.Speed, atpu$Temperature)
+plot(atpu.wind$Wind.Speed, atpu.wind$Temperature)
 
 
-vis.gam(m5.0_puffinAEB, view = c("Temperature", "Wind.Speed"), plot.type = "contour")
+vis.gam(factor_interact, theta = 120, n.grid = 50, lwd = 0.4)
+
+vis.gam(m5.0_puffinAEB, view = c("Temperature", "Wind.Speed"), 
+        plot.type = "contour")
 
 vis.gam(m5.0_puffinAEB, view = c("Temperature", "Wind.Speed"),
     theta = 100, n.grid = 40, lwd = 0.4)
+
+vis.gam(m8.1_puffinAEB, view = c("Temperature", "Wind.Speed"),
+    theta = 700, n.grid = 40, lwd = 0.4, too.far = 0.1)
 
 plot(m5.0_puffinAEB, scheme = 2)
 
@@ -3689,6 +3783,12 @@ burrow_means <- burrows %>% group_by(Species) %>%
 
 
 
+lssp %>% group_by(Burrow) %>%
+  summarise(volume = min(volume)) %>%
+  summarise(vol = mean(volume, na.rm =T),
+            vol.sd = sd(volume, na.rm =T))
+
+
 ## Calculate the mean variance between burrows
 mean_puffin <- ATPU_LSSP %>% filter(Location == "Inside") %>%
   group_by(Burrow, Species) %>%
@@ -3724,22 +3824,48 @@ extreme %>%
 
 
 
-# Explore the extreme temperature range to see whether it is comparable between the species
-extreme %>%
+# Explore the extreme temperature range to see whether 
+# the extreme events are comparable for each species
+extreme.summary <- extreme %>%
   group_by(Species, Extreme) %>%
   summarise(mean = mean(Temperature), 
             sd = sd(Temperature))
-            
 
-ggplot(extreme, aes(x = Species, y = Temperature)) +
+# ATPU 
+17.9 - 9.1 # Cold extreme = 8.8 degC different from the mean burrow temp
+26.1 - 17.9 # Hot extreme = 8.2 degC different from the mean burrow temp
+
+# LESP
+15.8 - 6 # Cold extreme = 9.8 degC different from the mean burrow temp
+26.6 - 15.8 # Hot extreme = 10.8 degC different from the mean burrow temp
+
+
+# ATPU 
+16.6 - 9.1 # Cold extreme = 7.5 degC different from the mean burrow temp
+26.1 - 16.6 # Hot extreme = 9.5 degC different from the mean burrow temp
+
+# LESP
+15.7 - 6 # Cold extreme = 9.7 degC different from the mean burrow temp
+26.6 - 15.7 # Hot extreme = 10.9 degC different from the mean burrow temp
+
+
+model_df_short %>%
+  group_by(Species) %>%
+  summarise(mean.temp = mean(Temperature, na.rm = T))
+
+
+
+ggplot(extreme, aes(x = Extreme, y = Temperature)) +
   geom_boxplot( aes(fill = buffer_kestrel>0))+
   scale_fill_manual(values = c( "#E16E08", "#89B4C7"))+
-  ylab(bquote(T[Buffer]~"(°C)"))+ xlab("Thermal Event")+
+  ylab("Air Temperature (°C)")+ xlab("Thermal Event")+
   theme_bw(base_size = 15)+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         axis.title.x = element_text(vjust = -1))+
   theme(legend.position = "none")+
-  facet_wrap(~Extreme, scales = "free_y")+
+  facet_wrap(~Species, scales = "free_y")+
+  geom_hline(yintercept = 16.6, linetype = "dashed")+
+  geom_hline(yintercept = 15.7, linetype = "dashed")+
   theme(strip.text = element_text(size = 16, color = "white", face = "bold"), 
         strip.background = element_rect(fill="black"))
 
