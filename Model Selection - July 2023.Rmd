@@ -1,10 +1,9 @@
-
 ---
 title: "Appendix 1 - Model Selection Procedure for Drivers of Burrow Microclimate"
 subtitle: "Burrows buffer nest temperatures and offer a stable thermal microclimate for threatened seabird chicks during extreme events"
+author: "Cerren Richards"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: 
-  pdf_document:
+output: pdf_document:
     toc: yes
     toc_depth: 3
 ---
@@ -14,7 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r, include=FALSE}
-
 lssp <- read.csv("lssp.csv")
 
 lssp$Burrow <- factor(lssp$Burrow)
@@ -24,17 +22,18 @@ library(DHARMa); library(lme4); library(mgcViz); library(mgcv);library(dsm);libr
 ```
 
 
-# PETREL MODEL - Drivers of burrow microclimate
+# PETREL MODEL - Predict drivers of burrow microclimate
 
-Here we show the modelling steps followed to arrive at the final selected model used to test correlates of Leach's storm-petrel burrow microclimates. 
+Here we build a model to predict drivers of Leach's storm-petrel burrow microclimates.
 
-In the final model (`m7_petrel`), internal burrow temperature was included as the dependent variable. The interaction between weather conditions (air temperature, wind speed), in addition to burrow characteristics (entrance area, volume), and habitat features (canopy cover)  were included as smooth terms. A spline fits through time and Julian date were included to account for autocorrelation. Predictors were modeled with the default knots (k=10), except for the interaction between air temperature and wind speed, which was fit with k = 60, and Julian date, which was fit with k = 40.  All predictors were scaled and fitted with thin plate regression splines, except for time, which was fitted with a cyclic cubic regression spline to account for circular data. Burrow ID was added as a random factor, and defined with a random effects spline. 
+Internal burrow temperature was included as the dependent variable. Weather conditions (air temperature, wind speed), burrow characteristics (entrance area, volume), and habitat features (canopy cover)  were included as smooth terms. A spline fits through time and Julian date were included to account for autocorrelation. All predictors were scaled and fitted with thin plate regression splines, except for time, which was fitted with a cyclic cubic regression spline to account for circular data. Burrow ID was added as a random factor, and defined with a random effects spline. 
 
 Fitting the data with the thin plate regression splines (bs="ts"), is equivalent to the default `gam` smooth (bs="tp") but with a modification to the smoothing penalty, so that the null space is also penalized slightly and the whole term can therefore be shrunk to zero.
 
 Comparing the `gam` model with burrow as a random effect spline against a `gamm` model  produced effectively equivalent model outputs. However, we selected the `gam` model because it allows for tests of random effect terms against a null of 0 variance.
 
 ## Initial Model
+
 
 ```{r, warning = FALSE, message=FALSE}
 
