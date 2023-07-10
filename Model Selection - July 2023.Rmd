@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r, include=FALSE}
+
 lssp <- read.csv("lssp.csv")
 
 lssp$Burrow <- factor(lssp$Burrow)
@@ -32,12 +33,17 @@ Fitting the data with the thin plate regression splines (bs="ts"), is equivalent
 
 Comparing the `gam` model with burrow as a random effect spline against a `gamm` model  produced effectively equivalent model outputs. However, we selected the `gam` model because it allows for tests of random effect terms against a null of 0 variance.
 
-## Initial Model
+
+## Initial Models
+
+1.	Modelled GAM with burrow as a random factor, and date and time as predictors to account for autocorrelation 
+a.	Model fit is good, except for autocorrelation
+b.	Autocorrelation cannot be modelled with AR for GAM models
 
 
 ```{r, warning = FALSE, message=FALSE}
 
-# Run the model
+# Model with spline fits
 m1_petrel <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
@@ -46,6 +52,32 @@ m1_petrel <- gam(data = lssp,
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
+
+# Explore temp-wind interaction term
+m2_petrel <- gam(data = lssp,
+           Inside~s(scale(Temperature), scale(Wind.Speed)) +
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts") + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+# Explore Linear interaction 
+m3_petrel <- gam(data = lssp,
+           Inside~scale(Temperature) * scale(Wind.Speed) + 
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts") + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+```
+
+**Compare AIC**
+
+Spline interaction has the lowest AIC score
+
+```{r}
+AIC(m1_petrel, m2_petrel, m3_petrel)
 ```
 
 
@@ -53,16 +85,87 @@ m1_petrel <- gam(data = lssp,
 **Model Summary**
 ```{r, echo=FALSE}
 
-summary(m1_petrel)
+summary(m2_petrel)
 
 ```
+
+## Increase the knots for Julian date
+
+From the summary table of `m2_petrel`, the edf is close to the ref.df, indicating that the knots may need to
+be increased. Here we double the knots to 20.
+
+```{r}
+
+m4_petrel <- gam(data = lssp,
+           Inside~s(scale(Temperature), scale(Wind.Speed)) +
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 20) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+```
+
+
+**Model Summary**
+```{r, echo=FALSE}
+
+summary(m4_petrel)
+
+```
+
+## Increase the knots again for Julian date
+```{r}
+
+m5_petrel <- gam(data = lssp,
+           Inside~s(scale(Temperature), scale(Wind.Speed)) +
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 40) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+```
+
+**Model Summary**
+```{r, echo=FALSE}
+
+summary(m5_petrel)
+
+```
+
+**Compare AIC**
+
+From the summary of `m5_petrel`, the edf continues to be close to the ref.df value, but we are unable to
+increase the knots further. Model `m5_petrel` with k = 40 has the lowest AIC score. 
+
+```{r}
+AIC(m2_petrel, m4_petrel, m5_petrel)
+```
+
+
+## Compare model fit
+
+**Test for temporal autocorrelation**
+
+The model `m5_petrel` is highly autocorrelated, therefore, we will try and model with `bam` instead.
+```{r}
+acf(residuals(m5_petrel))
+```
+
+
+
+
+
+
+
+
+
 
 
 
 
 # Original model
 
-```{r}
+```{r , include=FALSE}
 library(DHARMa); library(lme4); library(mgcViz); library(mgcv);library(dsm);library(dplyr)
 
 
@@ -106,7 +209,7 @@ acf(residuals(m6_puffin))
 
 ## GAMM with corAR1
 
-```{r}
+```{r, include=FALSE}
 m10_puffin <- gamm(data = atpu.wind,
                    Inside~s(scale(Temperature), scale(Wind.Speed), k = 60) +
                    random = list(Burrow = ~1),# Burrow features
@@ -124,7 +227,7 @@ acf(residuals(m10_puffin$lme, type = "normalized"))
 
 
 
-```{r setup}
+```{r setup, include=FALSE}
 library(DHARMa); library(lme4); library(mgcViz); library(mgcv);library(dsm);library(dplyr)
 
 
@@ -138,7 +241,7 @@ atpu.wind$Burrow <- factor(atpu.wind$Burrow)
 
 # BAM
 
-```{r}
+```{r, include=FALSE}
 # Model formulae. Set it up so that we can use base_form in a comparative GAMM
 # at the end for comparison. 
 base_form <- Inside ~ s(Temperature, Wind.Speed, k = 60) +
