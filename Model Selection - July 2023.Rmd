@@ -57,3 +57,206 @@ summary(m1_petrel)
 
 ```
 
+
+
+
+# Original model
+
+```{r}
+library(DHARMa); library(lme4); library(mgcViz); library(mgcv);library(dsm);library(dplyr)
+
+
+# Read data
+atpu.wind <- read.csv("atpu.wind.csv")
+
+# Set as factor
+atpu$Burrow <- factor(atpu$Burrow)
+
+# Model so far
+m6_puffin <- gam(data = atpu.wind,
+                 Inside~s(scale(Temperature), scale(Wind.Speed), k = 60) +
+                   s(Time, bs="cc") + 
+                   s(julian, bs="ts", k = 20)+ # Time and date
+                   s(Burrow, bs="re"), # random effect
+                 method = "REML") 
+
+
+## TEST FOR AUTOCORRELATION
+# Lots of useful info in the ?testTemporalAutocorrelation help file
+
+# Assign a date-time column 
+atpu$datetime2 <- as.POSIXct(atpu$datetime, format='%Y-%m-%d %H:%M')
+atpu.wind$datetime2 <- as.POSIXct(atpu.wind$datetime, format='%Y-%m-%d %H:%M')
+
+# Simulate the residuals for the model
+res <- simulateResiduals(m6_puffin)
+#res <- recalculateResiduals(res, group = atpu.wind$datetime2, rotation = "estimated")
+res <- recalculateResiduals(res, group = atpu.wind$datetime2)
+
+# Test for temporal autocorrelation
+# Clear autocorrelation present
+testTemporalAutocorrelation(res, time = unique(atpu.wind$datetime2))
+
+# Other autocorrelation test method
+acf(residuals(m6_puffin))
+
+```
+
+
+
+## GAMM with corAR1
+
+```{r}
+m10_puffin <- gamm(data = atpu.wind,
+                   Inside~s(scale(Temperature), scale(Wind.Speed), k = 60) +
+                   random = list(Burrow = ~1),# Burrow features
+                   corr = corAR1(form = ~ 1|Burrow),
+                   method = "REML")
+
+
+# The residual function for gam in R returns the residuals without adjustment for the correlation structure.
+# So must specify "normalized"
+acf(residuals(m10_puffin$lme, type = "normalized"))
+
+```
+
+
+
+
+
+```{r setup}
+library(DHARMa); library(lme4); library(mgcViz); library(mgcv);library(dsm);library(dplyr)
+
+
+# Read data
+atpu.wind <- read.csv("atpu.wind.csv")
+
+# Set as factor
+atpu.wind$Burrow <- factor(atpu.wind$Burrow)
+
+```
+
+# BAM
+
+```{r}
+# Model formulae. Set it up so that we can use base_form in a comparative GAMM
+# at the end for comparison. 
+base_form <- Inside ~ s(Temperature, Wind.Speed, k = 60) +
+  s(Time, bs = "cc") +
+  s(julian, bs = "ts", k = 33)
+# add the random effect for use in bam(). It is specified differently in gamm()
+form <- update(base_form, . ~ . + s(Burrow, bs = "re") )
+
+# Normally you would iterate through lots of times until you get the model 
+# struture you want.
+
+# Now deal with autocorrelation.
+# First time through with no AR(1) process to get initial rho estimate
+bam0 <- bam(formula = form, data = atpu.wind, method = "REML")
+summary(bam0)
+acf.vals <- acf(residuals(bam0))
+
+
+# We will use the estimated autocorrelation at lag 1 from the plot as our initial
+# value of rho.
+init.rho <- acf.vals$acf[2]
+
+# Unlike gamm(), we need to explicitly tell bam() about the structure of the 
+# data, that the data for each burrow is 1548 rows long. We create a vector
+# ar.strt to pass as the AR.start parameter to bam(). This vector has a TRUE
+# at the position where each burrow's data starts, that is, every 1548 rows
+# in our case.
+nBurrow <- length(unique(atpu.wind$Burrow))
+ar.strt <- rep(c(TRUE, rep(FALSE, (nrow(atpu.wind)/nBurrow) - 1)), 
+               length(unique(atpu.wind$Burrow)))
+
+# Set up a vector called rho to contain all the values we'd like to try for the
+# autocorrelation parameter. We will try all values from 90% to 110% of the 
+# initial value computed above, with a step of 0.01 between each one.
+# 
+# The idea is to re-run the model with each value of rho and find the 
+# one with the minimum REML score.
+# 
+# The "REML <- " part in the next line is just to initialize REML as a vector
+# of the same length as rho.
+REML <- rho <- seq(from = round(init.rho * 0.9, 2), 
+         to = min(0.99, round(init.rho * 1.1, 2)),
+         by = 0.01)
+
+# Run each model
+for(i in 1:length(rho)) {
+  message("Doing rho = ", rho[i])
+  bam1 <- bam(
+    formula = form,
+    rho = rho[i],
+    AR.start = ar.strt,
+    data = atpu.wind,
+    method = "REML"
+  )
+  REML[i] <- bam1$gcv.ubre # Save the REML score
+}
+
+# Plot the REML scores vs rho, check visually for a minima
+plot(rho, REML)
+
+# Use rho corresponding to lowest REML score 
+message("Chose rho = ", rho[which.min(REML)])
+
+# Now add it to the final model
+bam3 <- bam(
+    formula = form,
+    rho = rho[which.min(REML)],
+    AR.start = ar.strt,
+    data = atpu.wind,
+    method = "REML"
+)
+
+
+AIC(bam2, bam3)
+
+summary(bam2)
+acf(residuals(bam2)) # Correlated residuals
+acf(bam3$std.rsd) # These are the uncorrelated residuals after applying AR(1) .
+plot(bam2,scheme = 2)
+hist(resid(bam3))
+gam.check(bam3)
+
+vis.gam(bam3, view = c("Temperature", "Wind.Speed"),
+    theta = 700, n.grid = 40, lwd = 0.4, too.far = 0.1)
+
+#Compare to same GAMM - almost identical.
+mgamm <- gamm(formula = base_form,
+              data = atpu.wind,
+              random = list(Burrow = ~1),# Burrow features
+              corr = corAR1(),
+              method = "REML")
+summary(mgamm$lme)
+acf(residuals(mgamm$lme, type = "normalized"))
+
+
+
+res <- simulateResiduals(bam3)
+testDispersion(res)
+testUniformity(res)
+testOutliers(res)
+simulateResiduals(bam3, plot = T)
+
+atpu.wind$datetime2 <- as.POSIXct(atpu.wind$datetime, format='%Y-%m-%d %H:%M')
+res <- recalculateResiduals(res, group = atpu.wind$datetime2)
+
+
+plot(res)
+
+plot(atpu.wind$julian, atpu.wind$resid)
+plot(atpu.wind$Time, atpu.wind$resid)
+plot(atpu.wind$Wind.Speed, atpu.wind$resid)
+plot(atpu.wind$Temperature, atpu.wind$resid)
+
+atpu.wind$resid <- residuals(bam3)
+plot(atpu.wind$Inside, atpu.wind$resid)
+
+plot(atpu.wind$volume, atpu.wind$resid)
+plot(atpu.wind$volume, atpu.wind$Inside)
+```
+
+
