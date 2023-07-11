@@ -23,11 +23,25 @@ library(DHARMa); library(lme4); library(mgcViz); library(mgcv);library(dsm);libr
 ```
 
 
-# PETREL MODEL - Predict drivers of burrow microclimate
+# PETREL MODEL - correlates of burrow microclimate
 
-Here we build a model to predict drivers of Leach's storm-petrel burrow microclimates.
+Here we show the steps followed to test for correlation between external environmental conditions and petrel burrow thermal environment.
 
-Internal burrow temperature was included as the dependent variable. Weather conditions (air temperature, wind speed), burrow characteristics (entrance area, volume), and habitat features (canopy cover)  were included as smooth terms. A spline fits through time and Julian date were included to account for autocorrelation. All predictors were scaled and fitted with thin plate regression splines, except for time, which was fitted with a cyclic cubic regression spline to account for circular data. Burrow ID was added as a random factor, and defined with a random effects spline. 
+We tested a variety of models including GAM, BAM, and GAMM. Additionally we tried different methods of accounting for autocorrelation. 
+
+1. GAM, BAM, and GAMM
+2. Smooth terms, linear terms and interaction terms
+3. Autocorrelation: AR(1) and date time spline fits 
+4. Burrow ID as a random factor
+
+
+In the final model, internal burrow temperature (Internal) was included as the dependent variable. The interaction between air temperature and wind speed was included as a smooth term. 
+
+The final model was selected based on lowest AIC score and best fit. 
+
+____________
+
+A spline fits through time and Julian date were included to account for autocorrelation. All predictors were scaled and fitted with thin plate regression splines, except for time, which was fitted with a cyclic cubic regression spline to account for circular data. Burrow ID was added as a random factor, and defined with a random effects spline. 
 
 Fitting the data with the thin plate regression splines (bs="ts"), is equivalent to the default `gam` smooth (bs="tp") but with a modification to the smoothing penalty, so that the null space is also penalized slightly and the whole term can therefore be shrunk to zero.
 
@@ -536,8 +550,6 @@ base_form <- Inside ~ s(Temperature, Wind.Speed, k = 60) +
 # add the random effect for use in bam(). It is specified differently in gamm()
 form <- update(base_form, . ~ . + s(Burrow, bs = "re") )
 
-# Normally you would iterate through lots of times until you get the model 
-# structure you want.
 
 # Now deal with autocorrelation.
 # First time through with no AR(1) process to get initial rho estimate
@@ -592,7 +604,7 @@ plot(rho, REML)
 message("Chose rho = ", rho[which.min(REML)])
 
 # Now add it to the final model
-bam3 <- bam(
+bam2 <- bam(
     formula = form,
     rho = rho[which.min(REML)],
     AR.start = ar.strt,
@@ -601,17 +613,21 @@ bam3 <- bam(
 )
 
 
-AIC(bam2, bam3)
-
 summary(bam2)
 acf(residuals(bam2)) # Correlated residuals
 acf(bam3$std.rsd) # These are the uncorrelated residuals after applying AR(1) .
+
+
+# Check model fit
+
 plot(bam2,scheme = 2)
-hist(resid(bam3))
-gam.check(bam3)
+hist(resid(bam2))
+gam.check(bam2)
 
 vis.gam(bam3, view = c("Temperature", "Wind.Speed"),
     theta = 700, n.grid = 40, lwd = 0.4, too.far = 0.1)
+
+
 
 #Compare to same GAMM - almost identical.
 mgamm <- gamm(formula = base_form,
@@ -622,7 +638,7 @@ mgamm <- gamm(formula = base_form,
 summary(mgamm$lme)
 acf(residuals(mgamm$lme, type = "normalized"))
 
-
+acf(residuals(bam3))
 
 res <- simulateResiduals(bam3)
 testDispersion(res)
