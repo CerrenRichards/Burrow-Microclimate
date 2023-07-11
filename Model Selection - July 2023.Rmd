@@ -94,7 +94,7 @@ summary(m2_petrel)
 From the summary table of `m2_petrel`, the edf is close to the ref.df, indicating that the knots may need to
 be increased. Here we double the knots to 20.
 
-```{r}
+```{r, warning = FALSE, message=FALSE}
 
 m4_petrel <- gam(data = lssp,
            Inside~s(scale(Temperature), scale(Wind.Speed)) +
@@ -114,7 +114,7 @@ summary(m4_petrel)
 ```
 
 ## Increase the knots again for Julian date
-```{r}
+```{r, warning = FALSE, message=FALSE}
 
 m5_petrel <- gam(data = lssp,
            Inside~s(scale(Temperature), scale(Wind.Speed)) +
@@ -142,14 +142,287 @@ AIC(m2_petrel, m4_petrel, m5_petrel)
 ```
 
 
-## Compare model fit
+## Explore model fit
 
 **Test for temporal autocorrelation**
 
-The model `m5_petrel` is highly autocorrelated, therefore, we will try and model with `bam` instead.
+The model `m5_petrel` is highly autocorrelated, therefore, we reject this model. Next we will explore a `bam` model instead.
 ```{r}
 acf(residuals(m5_petrel))
 ```
+
+
+## `BAM` model
+
+** Issues that need to be fixed with the BAM!!!
+
+```{r, include=FALSE}
+# Model formulae. Set it up so that we can use base_form in a comparative GAMM
+# at the end for comparison. 
+base_form <- Inside ~ s(scale(Temperature), scale(Wind.Speed)) +
+  s(Time, bs = "cc") +
+  s(julian, bs = "ts")
+# add the random effect for use in bam(). It is specified differently in gamm()
+form <- update(base_form, . ~ . + s(Burrow, bs = "re") )
+
+# Now deal with autocorrelation.
+# First time through with no AR(1) process to get initial rho estimate
+bam0 <- bam(formula = form, data = lssp, method = "REML")
+summary(bam0)
+acf.vals <- acf(residuals(bam0))
+
+
+# We will use the estimated autocorrelation at lag 1 from the plot as our initial
+# value of rho.
+init.rho <- acf.vals$acf[2]
+
+# Unlike gamm(), we need to explicitly tell bam() about the structure of the 
+# data, that the data for each burrow is 1548 rows long. We create a vector
+# ar.strt to pass as the AR.start parameter to bam(). This vector has a TRUE
+# at the position where each burrow's data starts, that is, every 1548 rows
+# in our case.
+nBurrow <- length(unique(lssp$Burrow))
+ar.strt <- rep(c(TRUE, rep(FALSE, (nrow(lssp)/nBurrow) - 1)), 
+               length(unique(lssp$Burrow)))
+
+# Set up a vector called rho to contain all the values we'd like to try for the
+# autocorrelation parameter. We will try all values from 90% to 110% of the 
+# initial value computed above, with a step of 0.01 between each one.
+# 
+# The idea is to re-run the model with each value of rho and find the 
+# one with the minimum REML score.
+# 
+# The "REML <- " part in the next line is just to initialize REML as a vector
+# of the same length as rho.
+REML <- rho <- seq(from = round(init.rho * 0.9, 2), 
+         to = min(0.99, round(init.rho * 1.1, 2)),
+         by = 0.01)
+
+# Run each model
+for(i in 1:length(rho)) {
+  message("Doing rho = ", rho[i])
+  bam1 <- bam(
+    formula = form,
+    rho = rho[i],
+    AR.start = ar.strt,
+    data = lssp,
+    method = "REML"
+  )
+  REML[i] <- bam1$gcv.ubre # Save the REML score
+}
+
+# Plot the REML scores vs rho, check visually for a minima
+plot(rho, REML)
+
+# Use rho corresponding to lowest REML score 
+message("Chose rho = ", rho[which.min(REML)])
+
+# Now add it to the final model
+bam3 <- bam(
+    formula = form,
+    rho = rho[which.min(REML)],
+    AR.start = ar.strt,
+    data = atpu.wind,
+    method = "REML"
+)
+
+
+AIC(bam2, bam3)
+
+summary(bam2)
+acf(residuals(bam2)) # Correlated residuals
+acf(bam3$std.rsd) # These are the uncorrelated residuals after applying AR(1) .
+plot(bam2,scheme = 2)
+hist(resid(bam3))
+gam.check(bam3)
+
+vis.gam(bam3, view = c("Temperature", "Wind.Speed"),
+    theta = 700, n.grid = 40, lwd = 0.4, too.far = 0.1)
+
+#Compare to same GAMM - almost identical.
+mgamm <- gamm(formula = base_form,
+              data = atpu.wind,
+              random = list(Burrow = ~1),# Burrow features
+              corr = corAR1(),
+              method = "REML")
+summary(mgamm$lme)
+acf(residuals(mgamm$lme, type = "normalized"))
+
+```
+
+
+
+## GAMM with corAR1
+
+Since the model fit for the BAM was not the best, we will explore the GAMM option with burrow as a random effect and include a corAR1 term to account for autocorrelation.
+
+```{r, include=FALSE}
+
+m10_petrel <- gamm(data = lssp,
+                   Inside~s(scale(Temperature), scale(Wind.Speed)),
+                   random = list(Burrow = ~1),# Burrow features
+                   corr = corAR1(form = ~ 1|Burrow),
+                   method = "REML")
+
+```
+
+**Model Summary - gam**
+```{r, echo=FALSE}
+
+summary(m10_petrel$gam)
+
+```
+
+**Model Summary - lme**
+```{r, echo=FALSE}
+
+summary(m10_petrel$lme)
+
+```
+
+## Explore model fit
+
+**Test for temporal autocorrelation**
+
+The residual function for gam in R returns the residuals without adjustment for the correlation structure. So must specify type = "normalized"
+```{r}
+acf(residuals(m10_petrel$lme, type = "normalized"))
+```
+
+
+**Gam.check**
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+
+gam.check(m10_petrel$gam)
+
+```
+
+
+
+**lme plot**
+
+``````{r, out.width = '60%', fig.align = "center"}
+
+plot(m10_petrel$lme)
+
+```
+
+
+
+**Visualise the temp-wind interaction in 2D**
+
+``````{r, out.width = '60%', fig.align = "center"}
+
+plot(m10_petrel$gam, scheme = 2, pages = 1)
+
+```
+
+
+
+**Visualise the temp-wind interaction in 3D**
+
+Internal burrow temperature increases with external air temperature. However, there is a non-linear interaction effect between wind speed and temperature, where internal burrow temperature decreases with increasing wind speed while external air temperatures are low, but increases with wind speed while air temperature is high. 
+
+These plots are identical, but have been rotated to view the data from different angles. Low values of internal burrow temperatures (linear predictor) are red and high values are yellow.
+
+```{r, echo=FALSE, fig.align = "center", warning=FALSE}
+
+# The code for the 3D plot below will not run unless the data are scaled beforehand 
+# So we will scale the data in the dataframe and rerun the model so that the variables match
+
+
+# Scale the data before hand
+lssp$Temperature. <- scale(lssp$Temperature)
+lssp$Wind.Speed. <- scale(lssp$Wind.Speed)
+
+# run the model
+m11_petrel <- gamm(data = lssp,
+                   Inside~s(Temperature., Wind.Speed.),
+                   random = list(Burrow = ~1),# Burrow features
+                   corr = corAR1(form = ~ 1|Burrow),
+                   method = "REML")
+
+
+# Create the two plots side-by-side
+par(mfrow = c(1,2))
+
+# Plot Rotation 1
+vis.gam(m10_petrel$gam, view = c("Temperature.", "Wind.Speed."),
+    theta = 700, n.grid = 40, lwd = 0.4, too.far = 0.1)
+
+# Plot Rotation 2
+vis.gam(m8_petrel, view = c("Temperature.", "Wind.Speed."),
+    theta = 550, n.grid = 40, lwd = 0.4, too.far = 0.1)
+
+par(mfrow = c(1, 1))
+
+
+```
+
+
+
+
+
+
+# PUFFIN MODEL - Drivers of burrow microclimate
+
+Here we show the modelling steps followed to arrive at the final selected model used to test correlates of Atlantic puffin burrow microclimates.  
+
+In the final model (`m6_puffin`), internal burrow temperature was included as the dependent variable. The interaction between weather conditions (air temperature, wind speed), in addition to burrow characteristics (entrance area, volume) were included as smooth terms. A spline fits through time and Julian date were included to account for autocorrelation. Predictors were modeled with the default knots (k=10), except for the interaction between air temperature and wind speed, which was fit with k = 60, and Julian date, which was fit with k = 20.  All predictors were scaled and fitted with thin plate regression splines, except for time, which was fitted with a cyclic cubic regression spline to account for circular data. Burrow ID was added as a random factor, and defined with a random effects spline. 
+
+Fitting the data with the thin plate regression splines (bs="ts"), is equivalent to the default `gam` smooth (bs="tp") but with a modification to the smoothing penalty, so that the null space is also penalized slightly and the whole term can therefore be shrunk to zero.
+
+Comparing the `gam` model with burrow as a random effect spline against a `gamm` model  produced effectively equivalent model outputs. However, we selected the `gam` model because it allows for tests of random effect terms against a null of 0 variance.
+
+```{r, include=FALSE}
+atpu <- read.csv("atpu.csv")
+
+atpu$Burrow <- factor(atpu$Burrow)
+
+```
+
+
+## Exploring wind speed
+
+In the plot below, the data for wind speed exceed the speeds recorded during the hurricane, suggesting that there may be issues with data at these three points. They occurred all on the same day over a 1.5 hour period. 
+
+```{r, out.width = '60%', fig.align = "center"}
+plot(atpu$Wind.Speed, atpu$Inside)
+```
+
+**Removing potentially erroneous data**
+
+We will remove the high wind speed records for the modelling.
+
+```{r, out.width = '60%', fig.align = "center"}
+# Remove the higher wind speeds
+atpu.wind <- atpu %>% filter(Wind.Speed < 30)
+
+# Visualise the data
+plot(atpu.wind$Wind.Speed, atpu.wind$Inside)
+```
+
+
+## Initial model
+
+```{r, warning = FALSE, message=FALSE}
+
+m1_puffin <- gam(data = atpu.wind,
+           Inside~s(scale(Temperature), bs="ts") + # Weather 
+                  s(scale(Wind.Speed),bs="ts") +  # Weather
+                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(volume),bs="ts") + # Burrow features
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts") + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+```
+
+
+
+
 
 
 
@@ -251,7 +524,7 @@ base_form <- Inside ~ s(Temperature, Wind.Speed, k = 60) +
 form <- update(base_form, . ~ . + s(Burrow, bs = "re") )
 
 # Normally you would iterate through lots of times until you get the model 
-# struture you want.
+# structure you want.
 
 # Now deal with autocorrelation.
 # First time through with no AR(1) process to get initial rho estimate
