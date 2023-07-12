@@ -166,6 +166,13 @@ acf(residuals(m5_petrel))
 ** Issues that need to be fixed with the BAM!!!
 
 ```{r, include=FALSE}
+
+## No data were recorded from the forest plot weather station at 2021-09-11 08:30:00. 
+## The following code needs equal number of rows to run the model.
+## We will therefore filter out the data at this timepoint for the open plot burrows.
+lssp2 <- lssp %>% filter(datetime != "2021-09-11 08:30:00") 
+
+
 # Model formulae. Set it up so that we can use base_form in a comparative GAMM
 # at the end for comparison. 
 base_form <- Inside ~ s(scale(Temperature), scale(Wind.Speed)) +
@@ -176,7 +183,7 @@ form <- update(base_form, . ~ . + s(Burrow, bs = "re") )
 
 # Now deal with autocorrelation.
 # First time through with no AR(1) process to get initial rho estimate
-bam0 <- bam(formula = form, data = lssp, method = "REML")
+bam0 <- bam(formula = form, data = lssp2, method = "REML")
 summary(bam0)
 acf.vals <- acf(residuals(bam0))
 
@@ -190,9 +197,9 @@ init.rho <- acf.vals$acf[2]
 # ar.strt to pass as the AR.start parameter to bam(). This vector has a TRUE
 # at the position where each burrow's data starts, that is, every 1548 rows
 # in our case.
-nBurrow <- length(unique(lssp$Burrow))
-ar.strt <- rep(c(TRUE, rep(FALSE, (nrow(lssp)/nBurrow) - 1)), 
-               length(unique(lssp$Burrow)))
+nBurrow <- length(unique(lssp2$Burrow))
+ar.strt <- rep(c(TRUE, rep(FALSE, (nrow(lssp2)/nBurrow) - 1)), 
+               length(unique(lssp2$Burrow)))
 
 # Set up a vector called rho to contain all the values we'd like to try for the
 # autocorrelation parameter. We will try all values from 90% to 110% of the 
@@ -214,7 +221,7 @@ for(i in 1:length(rho)) {
     formula = form,
     rho = rho[i],
     AR.start = ar.strt,
-    data = lssp,
+    data = lssp2,
     method = "REML"
   )
   REML[i] <- bam1$gcv.ubre # Save the REML score
@@ -231,17 +238,17 @@ bam3 <- bam(
     formula = form,
     rho = rho[which.min(REML)],
     AR.start = ar.strt,
-    data = atpu.wind,
+    data = lssp2,
     method = "REML"
 )
 
 
 AIC(bam2, bam3)
 
-summary(bam2)
-acf(residuals(bam2)) # Correlated residuals
+summary(bam3)
+acf(residuals(bam3)) # Correlated residuals
 acf(bam3$std.rsd) # These are the uncorrelated residuals after applying AR(1) .
-plot(bam2,scheme = 2)
+plot(bam3,scheme = 2)
 hist(resid(bam3))
 gam.check(bam3)
 
@@ -628,18 +635,7 @@ vis.gam(bam3, view = c("Temperature", "Wind.Speed"),
     theta = 700, n.grid = 40, lwd = 0.4, too.far = 0.1)
 
 
-
-#Compare to same GAMM - almost identical.
-mgamm <- gamm(formula = base_form,
-              data = atpu.wind,
-              random = list(Burrow = ~1),# Burrow features
-              corr = corAR1(),
-              method = "REML")
-summary(mgamm$lme)
-acf(residuals(mgamm$lme, type = "normalized"))
-
-acf(residuals(bam3))
-
+##________________________________________
 res <- simulateResiduals(bam3)
 testDispersion(res)
 testUniformity(res)
@@ -665,7 +661,25 @@ plot(atpu.wind$volume, atpu.wind$Inside)
 ```
 
 
+## GAMM
 
+```{r}
+
+#Compare to same GAMM - almost identical.
+mgamm <- gamm(formula = base_form,
+              data = atpu.wind,
+              random = list(Burrow = ~1),# Burrow features
+              corr = corAR1(),
+              method = "REML")
+summary(mgamm$lme)
+acf(residuals(mgamm$lme, type = "normalized"))
+
+# Check model fit
+plot(mgamm$gam,scheme = 2)
+hist(resid(mgamm$gam))
+gam.check(mgamm$gam)
+plot(mgamm$lme)
+```
 
 
 
