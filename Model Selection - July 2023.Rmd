@@ -1,11 +1,11 @@
 ---
 title: "Appendix 1 - Model Selection Procedure for Drivers of Burrow Microclimate"
 subtitle: "Burrows buffer nest temperatures and offer a stable thermal microclimate for threatened seabird chicks during extreme events"
-author: "Cerren Richards"
+author: '[Cerren Richards](https://www.cerrenrichards.com)'
 date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: pdf_document:
+output: 
+  pdf_document:
     toc: yes
-    toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
@@ -29,26 +29,10 @@ Here we show the steps followed to test for correlation between external environ
 
 We tested a variety of models including GAM, BAM, and GAMM. Additionally we tried different methods of accounting for autocorrelation. 
 
-1. GAM, BAM, and GAMM
-2. Smooth terms, linear terms and interaction terms
-3. Autocorrelation: AR(1) and date time spline fits 
-4. Burrow ID as a random factor
-
-
-In the final model, internal burrow temperature (Internal) was included as the dependent variable. The interaction between air temperature and wind speed was included as a smooth term. 
-
-The final model was selected based on lowest AIC score and best fit. 
-
-____________
-
-A spline fits through time and Julian date were included to account for autocorrelation. All predictors were scaled and fitted with thin plate regression splines, except for time, which was fitted with a cyclic cubic regression spline to account for circular data. Burrow ID was added as a random factor, and defined with a random effects spline. 
-
-Fitting the data with the thin plate regression splines (bs="ts"), is equivalent to the default `gam` smooth (bs="tp") but with a modification to the smoothing penalty, so that the null space is also penalized slightly and the whole term can therefore be shrunk to zero.
-
-Comparing the `gam` model with burrow as a random effect spline against a `gamm` model  produced effectively equivalent model outputs. However, we selected the `gam` model because it allows for tests of random effect terms against a null of 0 variance.
-
 
 ## Initial Models
+
+Run three initial models to identify whether the weather variables should be fitted as spline terms, a spline interaction term or linear interaction term. 
 
 ```{r, warning = FALSE, message=FALSE}
 
@@ -83,7 +67,7 @@ m3_petrel <- gam(data = lssp,
 
 **Compare AIC**
 
-Spline interaction has the lowest AIC score
+Spline interaction (`m2_petrel`) has the lowest AIC score.
 
 ```{r}
 AIC(m1_petrel, m2_petrel, m3_petrel)
@@ -100,8 +84,7 @@ summary(m2_petrel)
 
 ## Increase the knots for Julian date
 
-From the summary table of `m2_petrel`, the edf is close to the ref.df, indicating that the knots may need to
-be increased. Here we double the knots to 20.
+From the summary table of `m2_petrel`, the edf is close to the ref.df, indicating that the knots may need to be increased. Here we double the knots to 20.
 
 ```{r, warning = FALSE, message=FALSE}
 
@@ -135,6 +118,9 @@ m5_petrel <- gam(data = lssp,
 ```
 
 **Model Summary**
+
+From the summary of `m5_petrel`, the edf continues to be close to the ref.df value, but we are unable to increase the knots further.
+
 ```{r, echo=FALSE}
 
 summary(m5_petrel)
@@ -143,8 +129,7 @@ summary(m5_petrel)
 
 **Compare AIC**
 
-From the summary of `m5_petrel`, the edf continues to be close to the ref.df value, but we are unable to
-increase the knots further. Model `m5_petrel` with k = 40 has the lowest AIC score. 
+Model `m5_petrel` with k = 40 has the lowest AIC score. 
 
 ```{r}
 AIC(m2_petrel, m4_petrel, m5_petrel)
@@ -162,8 +147,6 @@ acf(residuals(m5_petrel))
 
 
 ## `BAM` model
-
-** Issues that need to be fixed with the BAM!!!
 
 ```{r, include=FALSE}
 
@@ -193,9 +176,9 @@ acf.vals <- acf(residuals(bam0))
 init.rho <- acf.vals$acf[2]
 
 # Unlike gamm(), we need to explicitly tell bam() about the structure of the 
-# data, that the data for each burrow is 1548 rows long. We create a vector
+# data, that the data for each petrel burrow is 2172 rows long. We create a vector
 # ar.strt to pass as the AR.start parameter to bam(). This vector has a TRUE
-# at the position where each burrow's data starts, that is, every 1548 rows
+# at the position where each burrow's data starts, that is, every 2172 rows
 # in our case.
 nBurrow <- length(unique(lssp2$Burrow))
 ar.strt <- rep(c(TRUE, rep(FALSE, (nrow(lssp2)/nBurrow) - 1)), 
@@ -243,8 +226,6 @@ bam3 <- bam(
 )
 
 
-AIC(bam2, bam3)
-
 summary(bam3)
 acf(residuals(bam3)) # Correlated residuals
 acf(bam3$std.rsd) # These are the uncorrelated residuals after applying AR(1) .
@@ -265,6 +246,42 @@ summary(mgamm$lme)
 acf(residuals(mgamm$lme, type = "normalized"))
 
 ```
+
+
+**Model Summary - BAM**
+```{r, echo=FALSE}
+
+summary(bam3)
+
+```
+
+
+## Explore model fit
+
+**Test for temporal autocorrelation**
+
+Correlated residuals
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+acf(residuals(bam3))
+```
+
+These are the uncorrelated residuals after applying AR(1)
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+acf(bam3$std.rsd)
+```
+
+
+
+**Gam.check**
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+
+gam.check(bam3)
+
+```
+
 
 
 
@@ -364,11 +381,11 @@ m11_petrel <- gamm(data = lssp,
 par(mfrow = c(1,2))
 
 # Plot Rotation 1
-vis.gam(m10_petrel$gam, view = c("Temperature.", "Wind.Speed."),
-    theta = 700, n.grid = 40, lwd = 0.4, too.far = 0.1)
+vis.gam(m11_petrel$gam, view = c("Temperature.", "Wind.Speed."),
+    theta = 100, n.grid = 40, lwd = 0.4, too.far = 0.1)
 
 # Plot Rotation 2
-vis.gam(m8_petrel, view = c("Temperature.", "Wind.Speed."),
+vis.gam(m11_petrel$gam, view = c("Temperature.", "Wind.Speed."),
     theta = 550, n.grid = 40, lwd = 0.4, too.far = 0.1)
 
 par(mfrow = c(1, 1))
@@ -381,15 +398,10 @@ par(mfrow = c(1, 1))
 
 
 
-# PUFFIN MODEL - Drivers of burrow microclimate
+# PUFFIN MODEL - correlates of burrow microclimate
 
 Here we show the modelling steps followed to arrive at the final selected model used to test correlates of Atlantic puffin burrow microclimates.  
 
-In the final model (`m6_puffin`), internal burrow temperature was included as the dependent variable. The interaction between weather conditions (air temperature, wind speed), in addition to burrow characteristics (entrance area, volume) were included as smooth terms. A spline fits through time and Julian date were included to account for autocorrelation. Predictors were modeled with the default knots (k=10), except for the interaction between air temperature and wind speed, which was fit with k = 60, and Julian date, which was fit with k = 20.  All predictors were scaled and fitted with thin plate regression splines, except for time, which was fitted with a cyclic cubic regression spline to account for circular data. Burrow ID was added as a random factor, and defined with a random effects spline. 
-
-Fitting the data with the thin plate regression splines (bs="ts"), is equivalent to the default `gam` smooth (bs="tp") but with a modification to the smoothing penalty, so that the null space is also penalized slightly and the whole term can therefore be shrunk to zero.
-
-Comparing the `gam` model with burrow as a random effect spline against a `gamm` model  produced effectively equivalent model outputs. However, we selected the `gam` model because it allows for tests of random effect terms against a null of 0 variance.
 
 ```{r, include=FALSE}
 atpu <- read.csv("atpu.csv")
