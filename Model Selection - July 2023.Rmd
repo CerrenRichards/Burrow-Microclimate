@@ -141,14 +141,14 @@ AIC(m2_petrel, m4_petrel, m5_petrel)
 **Test for temporal autocorrelation**
 
 The model `m5_petrel` is highly autocorrelated, therefore, we reject this model. Next we will explore a `bam` model instead.
-```{r}
+```{r, out.width = '60%', fig.align = "center"}
 acf(residuals(m5_petrel))
 ```
 
 
 ## `BAM` model
 
-```{r, warning = FALSE, message=FALSE}
+```{r, warning = FALSE, message=FALSE, out.width = '60%', fig.align = "center"}
 
 ## No data were recorded from the forest plot weather station at 2021-09-11 08:30:00. 
 ## The following code needs equal number of rows to run the model.
@@ -236,13 +236,13 @@ summary(bam2_petrel)
 
 Correlated residuals
 
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+```{r, out.width = '60%', fig.align = "center"}
 acf(residuals(bam2_petrel))
 ```
 
 These are the uncorrelated residuals after applying AR(1)
 
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+```{r, out.width = '60%', fig.align = "center"}
 acf(bam2_petrel$std.rsd)
 ```
 
@@ -259,7 +259,7 @@ gam.check(bam2_petrel)
 **Plotting**
 
 ```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-plot(bam2_petrel, scheme = 2)
+plot(bam2_petrel, scheme = 2, pages = 1)
 ```
 
 
@@ -497,7 +497,7 @@ acf(residuals(m5_puffin))
 
 ## `BAM` model
 
-```{r, warning = FALSE, message=FALSE}
+```{r, warning = FALSE, message=FALSE, out.width = '60%', fig.align = "center"}
 # Model formulae. 
 
 base_form <- Inside ~ s(Temperature, Wind.Speed, k = 60) +
@@ -604,7 +604,7 @@ gam.check(bam2_puffin)
 **Plotting**
 
 ```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-plot(bam2_puffin, scheme = 2)
+plot(bam2_puffin, scheme = 2, pages = 1)
 ```
 
 
