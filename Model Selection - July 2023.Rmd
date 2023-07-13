@@ -297,7 +297,7 @@ summary(gamm1_petrel$lme)
 **Test for temporal autocorrelation**
 
 The residual function for gam in R returns the residuals without adjustment for the correlation structure. So must specify type = "normalized"
-```{r}
+```{r, out.width = '60%', fig.align = "center"}
 acf(residuals(gamm1_petrel$lme, type = "normalized"))
 ```
 
@@ -575,6 +575,7 @@ summary(bam2_puffin)
 ```
 
 
+
 ## Explore model fit
 
 **Test for temporal autocorrelation**
@@ -672,6 +673,271 @@ plot(gamm1_puffin$lme)
 ``````{r, out.width = '60%', fig.align = "center"}
 
 plot(gamm1_puffin$gam, scheme = 2, pages = 1)
+
+```
+
+
+# PETREL MODEL - correlates of burrow microclimate
+
+Here we show the steps followed to test for correlation between external environmental conditions and petrel burrow thermal environment.
+
+We tested a variety of models including GAM, BAM, and GAMM. Additionally we tried different methods of accounting for autocorrelation. 
+
+
+## Initial Models
+
+```{r}
+
+gam1<- gam(data = lssp,
+           buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
+                  s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(volume),bs="ts") +  # Weather
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts") + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+plot(gam1)
+summary(gam1)
+gam.check(gam1)
+
+gam3<- gam(data = lssp,
+           buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
+                  s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(volume),bs="ts") +  # Weather
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 20) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+gam4<- gam(data = lssp,
+           buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
+                  s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(volume),bs="ts") +  # Weather
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 40) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+AIC(gam1, gam3, gam4)
+summary(gam4)
+plot(gam3)
+gam.check(gam4)
+acf(residuals(gam4))
+
+
+gam2<- gam(data = atpu.wind,
+           buffer_kestrel~ s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(volume),bs="ts") +  # Weather
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts") + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+plot(gam2)
+summary(gam2)
+gam.check(gam2)
+
+
+```
+
+
+
+
+## `BAM` model
+
+```{r, warning = FALSE, message=FALSE, out.width = '60%', fig.align = "center"}
+# Model formulae. 
+
+form <- Inside ~ s(Temperature, Wind.Speed, k = 60) +
+  s(Time, bs = "cc") +
+  s(julian, bs = "ts", k = 20)
+# add the random effect for use in bam(). It is specified differently in gamm()
+form <- update(base_form, . ~ . + s(Burrow, bs = "re") )
+
+form <- buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
+          s(scale(Enterance_Area),bs="ts") +  # Weather
+          s(scale(volume),bs="ts") +  # Weather
+          s(Time, bs="cc") + # Time
+          s(julian, bs="ts", k = 40) + # Date
+          s(Burrow, bs="re") # random effect
+
+
+
+
+
+
+
+# Now deal with autocorrelation.
+# First time through with no AR(1) process to get initial rho estimate
+bam0_buffer <- bam(formula = form, data = lssp2, method = "REML")
+summary(bam0_buffer)
+acf.vals <- acf(residuals(bam0_buffer))
+
+
+# We will use the estimated autocorrelation at lag 1 from the plot as our initial
+# value of rho.
+init.rho <- acf.vals$acf[2]
+
+# Unlike gamm(), we need to explicitly tell bam() about the structure of the 
+# data, that the data for each burrow is 1548 rows long. We create a vector
+# ar.strt to pass as the AR.start parameter to bam(). This vector has a TRUE
+# at the position where each burrow's data starts, that is, every 1548 rows
+# in our case.
+nBurrow <- length(unique(lssp2$Burrow))
+ar.strt <- rep(c(TRUE, rep(FALSE, (nrow(lssp2)/nBurrow) - 1)), 
+               length(unique(lssp2$Burrow)))
+
+# Set up a vector called rho to contain all the values we'd like to try for the
+# autocorrelation parameter. We will try all values from 90% to 110% of the 
+# initial value computed above, with a step of 0.01 between each one.
+# 
+# The idea is to re-run the model with each value of rho and find the 
+# one with the minimum REML score.
+# 
+# The "REML <- " part in the next line is just to initialize REML as a vector
+# of the same length as rho.
+REML <- rho <- seq(from = round(init.rho * 0.9, 2), 
+         to = min(0.99, round(init.rho * 1.1, 2)),
+         by = 0.01)
+
+# Run each model
+for(i in 1:length(rho)) {
+  message("Doing rho = ", rho[i])
+  bam1_buffer <- bam(
+    formula = form,
+    rho = rho[i],
+    AR.start = ar.strt,
+    data = lssp2,
+    method = "REML"
+  )
+  REML[i] <- bam1_buffer$gcv.ubre # Save the REML score
+}
+
+
+# Now add it to the final model
+bam2_buffer <- bam(
+    formula = form,
+    rho = rho[which.min(REML)],
+    AR.start = ar.strt,
+    data = lssp2,
+    method = "REML"
+)
+
+summary(bam2_buffer)
+AIC(gam1, gam3, gam4)
+summary(gam4)
+plot(gam3)
+gam.check(gam4)
+acf(residuals(gam4))
+
+gam.check(bam2_buffer)
+plot(bam2_buffer, scheme = 2, pages = 1)
+
+```
+
+
+
+**Model Summary - BAM**
+```{r, echo=FALSE}
+
+summary(bam2_puffin)
+
+```
+
+
+
+
+## Explore model fit
+
+**Test for temporal autocorrelation**
+
+Correlated residuals
+
+```{r, out.width = '60%', fig.align = "center"}
+acf(residuals(bam2_buffer))
+```
+
+These are the uncorrelated residuals after applying AR(1)
+
+```{r, out.width = '60%', fig.align = "center"}
+acf(bam2_buffer$std.rsd)
+```
+
+
+**Gam.check**
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+
+gam.check(bam2_buffer)
+
+```
+
+
+**Plotting**
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+plot(bam2_puffin, scheme = 2, pages = 1)
+```
+
+
+## Extremes
+```{r}
+
+## Filter out the extreme temperatures (Puffin)
+## COLD
+extreme_cold_ATPU <- filter(atpu.wind, Temperature <= 10 & Species == "Atlantic puffin")
+extreme_cold_ATPU$Extreme <- "Cold Extreme"
+
+## HOT
+extreme_heat_ATPU <- filter(atpu.wind, Temperature >= 25.6 & Species == "Atlantic puffin")
+extreme_heat_ATPU$Extreme <- "Heat Extreme"
+
+
+## HOT
+extreme_heat_LSSP <- filter(lssp, Temperature >= 25.7 & Species == "Leach's storm-petrel")
+extreme_heat_LSSP$Extreme <- "Heat Extreme"
+
+
+## COLD
+extreme_cold_LSSP <- filter(lssp, Temperature <= 6.5 & Species == "Leach's storm-petrel")
+extreme_cold_LSSP$Extreme <- "Cold Extreme"
+
+
+
+gam_ext_pet<- gam(data = extreme_heat_LSSP,
+           buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
+                  s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(volume),bs="ts") +  # Weather
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+plot(gam_ext_pet)
+summary(gam_ext_pet)
+gam.check(gam_ext_pet)
+acf(residuals(gam_ext_pet))
+
+
+
+gam_ext_puffin<- gam(data = extreme_heat_ATPU,
+           buffer_kestrel~s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(volume),bs="ts") +  # Weather
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+summary(gam_ext_puffin)
+plot(gam_ext_puffin)
+
+
+gam_ext_puffin_col<- gam(data = extreme_cold_ATPU,
+           buffer_kestrel~s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(volume),bs="ts") +  # Weather
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+summary(gam_ext_puffin_col)
+plot(gam_ext_puffin_col)
 
 ```
 
