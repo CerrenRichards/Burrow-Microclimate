@@ -926,6 +926,245 @@ plot(gamm_cold_lssp$gam, pages = 1)
 
 
 
+# PUFFIN MODELS - Favourable burrow features during extreme temperatures 
+
+Filter the data in the 1st and 99th percentiles of external air temperatures recorded at the weather stations. These temperatures were identified as 25.6°C and 10°C.
+
+```{r}
+
+## COLD
+extreme_cold_ATPU <- filter(atpu.wind, Temperature <= 10 & Species == "Atlantic puffin")
+extreme_cold_ATPU$Extreme <- "Cold Extreme"
+
+## HOT
+extreme_heat_ATPU <- filter(atpu.wind, Temperature >= 25.6 & Species == "Atlantic puffin")
+extreme_heat_ATPU$Extreme <- "Heat Extreme"
+
+```
+
+
+## `GAM` model - Heat extreme
+
+```{r}
+
+gam_heat_ATPU<- gam(data = extreme_heat_ATPU,
+           buffer_kestrel~s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(volume),bs="ts") +  # Weather
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+```
+
+
+**Model Summary**
+```{r, echo=FALSE}
+
+summary(gam_heat_ATPU)
+
+```
+
+
+## Explore model fit
+
+**Test for temporal autocorrelation**
+
+```{r, out.width = '60%', fig.align = "center"}
+acf(residuals(gam_heat_ATPU))
+```
+
+
+**Gam.check**
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+gam.check(gam_heat_ATPU)
+```
+
+
+**Plotting**
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+plot(gam_heat_ATPU)
+```
+
+
+## `GAMM` with corAR1 - Heat extreme
+
+```{r}
+
+gamm_heat_ATPU <- gamm(data = extreme_heat_ATPU,
+                   buffer_kestrel~ s(scale(Enterance_Area),bs="ts") +  # 
+                   s(scale(volume),bs="ts") +  # Weather
+                   s(Burrow, bs="re"), # random effect
+                   corr = corAR1(form = ~ 1|Burrow),
+                   method = "REML")
+
+```
+
+
+**Model Summary - gam**
+```{r, echo=FALSE}
+
+summary(gamm_heat_ATPU$gam)
+
+```
+
+**Model Summary - lme**
+```{r, echo=FALSE}
+
+summary(gamm_heat_ATPU$lme)
+
+```
+
+## Explore model fit
+
+**Test for temporal autocorrelation**
+
+The residual function for gam in R returns the residuals without adjustment for the correlation structure. So must specify type = "normalized"
+
+```{r, out.width = '60%', fig.align = "center"}
+acf(residuals(gamm_heat_ATPU$lme, type = "normalized"))
+```
+
+
+**Gam.check**
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+
+gam.check(gamm_heat_ATPU$gam)
+
+```
+
+
+**lme plot**
+
+``````{r, out.width = '60%', fig.align = "center"}
+
+plot(gamm_heat_ATPU$lme)
+
+```
+
+
+**Plot**
+
+``````{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+
+plot(gamm_heat_ATPU$gam, pages = 1)
+
+```
+
+
+
+## `GAM` model - Cold extreme
+
+```{r}
+
+gam_cold_ATPU<- gam(data = extreme_cold_ATPU,
+           buffer_kestrel~s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(volume),bs="ts") +  # Weather
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+```
+
+
+**Model Summary**
+```{r, echo=FALSE}
+
+summary(gam_cold_ATPU)
+
+```
+
+
+## Explore model fit
+
+**Test for temporal autocorrelation**
+
+```{r, out.width = '60%', fig.align = "center"}
+acf(residuals(gam_cold_ATPU))
+```
+
+
+**Gam.check**
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+gam.check(gam_cold_ATPU)
+```
+
+
+**Plotting**
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+plot(gam_cold_ATPU)
+```
+
+
+## `GAMM` with corAR1 - cold extreme
+
+```{r}
+
+gamm_cold_ATPU <- gamm(data = extreme_cold_ATPU,
+                   buffer_kestrel~ s(scale(Enterance_Area),bs="ts") +  # 
+                   s(scale(volume),bs="ts") +  # Weather
+                   s(Burrow, bs="re"), # random effect
+                   corr = corAR1(form = ~ 1|Burrow),
+                   method = "REML")
+
+```
+
+
+**Model Summary - gam**
+```{r, echo=FALSE}
+
+summary(gamm_cold_ATPU$gam)
+
+```
+
+**Model Summary - lme**
+```{r, echo=FALSE}
+
+summary(gamm_cold_ATPU$lme)
+
+```
+
+## Explore model fit
+
+**Test for temporal autocorrelation**
+
+The residual function for gam in R returns the residuals without adjustment for the correlation structure. So must specify type = "normalized"
+
+```{r, out.width = '60%', fig.align = "center"}
+acf(residuals(gamm_cold_ATPU$lme, type = "normalized"))
+```
+
+
+**Gam.check**
+
+```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+
+gam.check(gamm_cold_ATPU$gam)
+
+```
+
+
+
+**lme plot**
+
+``````{r, out.width = '60%', fig.align = "center"}
+
+plot(gamm_cold_ATPU$lme)
+
+```
+
+
+**Plot**
+
+``````{r, fig.height = 15, fig.width = 15, fig.align = "center"}
+
+plot(gamm_cold_ATPU$gam, pages = 1)
+
+```
+
+
 
 
 
