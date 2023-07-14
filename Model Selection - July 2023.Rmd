@@ -1,5 +1,5 @@
 ---
-title: "Appendix 1 - Model Selection Procedure for Drivers of Burrow Microclimate"
+title: "Supplementary Material 1 - Model Selection Procedure for Drivers of Burrow Microclimate"
 subtitle: "Burrows buffer nest temperatures and offer a stable thermal microclimate for threatened seabird chicks during extreme events"
 author: '[Cerren Richards](https://www.cerrenrichards.com)'
 date: "`r format(Sys.time(), '%d %B, %Y')`"
@@ -882,7 +882,96 @@ plot(bam2_puffin, scheme = 2, pages = 1)
 ```
 
 
-## Extremes
+
+# PETREL MODELS - Favourable burrow features during extreme temperatures 
+
+Filter the data in the 1st and 99th percentiles of external air temperatures recorded at the weather stations. These temperatures were identified as 25.7°C and 6.5°C.
+
+```{r}
+
+## HOT
+extreme_heat_LSSP <- filter(lssp, Temperature >= 25.7 & Species == "Leach's storm-petrel")
+extreme_heat_LSSP$Extreme <- "Heat Extreme"
+
+
+## COLD
+extreme_cold_LSSP <- filter(lssp, Temperature <= 6.5 & Species == "Leach's storm-petrel")
+extreme_cold_LSSP$Extreme <- "Cold Extreme"
+
+```
+
+
+## GAM model
+
+```{r}
+
+gam_ext_pet<- gam(data = extreme_heat_LSSP,
+           buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
+                  s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(volume),bs="ts") +  # Weather
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+```
+
+
+**Model Summary**
+```{r, echo=FALSE}
+
+summary(gam_ext_pet)
+
+```
+
+
+## Explore model fit
+
+**Test for temporal autocorrelation**
+
+```{r, out.width = '60%', fig.align = "center"}
+acf(residuals(gam_ext_pet))
+```
+
+
+**Gam.check**
+
+```{r, out.width = '60%', fig.align = "center"}
+gam.check(gam_ext_pet)
+```
+
+
+**Gam.check**
+
+```{r, out.width = '60%', fig.align = "center"}
+plot(gam_ext_pet)
+```
+
+
+## BAM
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ```{r}
 
 ## Filter out the extreme temperatures (Puffin)
@@ -906,6 +995,8 @@ extreme_cold_LSSP$Extreme <- "Cold Extreme"
 
 
 
+
+## GAM
 gam_ext_pet<- gam(data = extreme_heat_LSSP,
            buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
                   s(scale(Enterance_Area),bs="ts") +  # Weather
@@ -917,6 +1008,22 @@ plot(gam_ext_pet)
 summary(gam_ext_pet)
 gam.check(gam_ext_pet)
 acf(residuals(gam_ext_pet))
+
+
+## GAMM
+gamm_extreme_pet <- gamm(data = extreme_heat_LSSP,
+                   buffer_kestrel~ s(scale(Canopy), bs="ts") +
+                    s(scale(Enterance_Area),bs="ts") +  # 
+                   s(scale(volume),bs="ts") +  # Weather
+                   s(Burrow, bs="re"), # random effect
+                   corr = corAR1(form = ~ 1|Burrow),
+                   method = "REML")
+
+gam.check(gamm_extreme_pet$gam)
+summary(gamm_extreme_pet$gam)
+acf(residuals(gamm_extreme_pet$lme, type = "normalized"))
+
+
 
 
 
