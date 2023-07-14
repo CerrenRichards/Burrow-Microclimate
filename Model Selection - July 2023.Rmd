@@ -738,7 +738,7 @@ gam.check(gam_heat_lssp)
 **Plotting**
 
 ```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-plot(gam_heat_lssp)
+plot(gam_heat_lssp, pages = 1)
 ```
 
 
@@ -749,8 +749,8 @@ plot(gam_heat_lssp)
 gamm_heat_lssp <- gamm(data = extreme_heat_LSSP,
                    buffer_kestrel~ s(scale(Canopy), bs="ts") +
                    s(scale(Enterance_Area),bs="ts") +  # 
-                   s(scale(volume),bs="ts") +  # Weather
-                   s(Burrow, bs="re"), # random effect
+                   s(scale(volume),bs="ts"),  # Weather
+                   random = list(Burrow = ~1),# Burrow features
                    corr = corAR1(form = ~ 1|Burrow),
                    method = "REML")
 
@@ -851,7 +851,7 @@ gam.check(gam_cold_lssp)
 **Plotting**
 
 ```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-plot(gam_cold_lssp)
+plot(gam_cold_lssp, pages = 1)
 ```
 
 
@@ -862,8 +862,8 @@ plot(gam_cold_lssp)
 gamm_cold_lssp <- gamm(data = extreme_cold_LSSP,
                    buffer_kestrel~ s(scale(Canopy), bs="ts") +
                    s(scale(Enterance_Area),bs="ts") +  # 
-                   s(scale(volume),bs="ts") +  # Weather
-                   s(Burrow, bs="re"), # random effect
+                   s(scale(volume),bs="ts"),  # Weather
+                   random = list(Burrow = ~1),# Burrow features
                    corr = corAR1(form = ~ 1|Burrow),
                    method = "REML")
 
@@ -983,7 +983,7 @@ gam.check(gam_heat_ATPU)
 **Plotting**
 
 ```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-plot(gam_heat_ATPU)
+plot(gam_heat_ATPU, pages = 1)
 ```
 
 
@@ -993,8 +993,8 @@ plot(gam_heat_ATPU)
 
 gamm_heat_ATPU <- gamm(data = extreme_heat_ATPU,
                    buffer_kestrel~ s(scale(Enterance_Area),bs="ts") +  # 
-                   s(scale(volume),bs="ts") +  # Weather
-                   s(Burrow, bs="re"), # random effect
+                   s(scale(volume),bs="ts"),  # Weather
+                   random = list(Burrow = ~1),# Burrow features
                    corr = corAR1(form = ~ 1|Burrow),
                    method = "REML")
 
@@ -1094,7 +1094,7 @@ gam.check(gam_cold_ATPU)
 **Plotting**
 
 ```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-plot(gam_cold_ATPU)
+plot(gam_cold_ATPU, pages = 1)
 ```
 
 
@@ -1104,8 +1104,8 @@ plot(gam_cold_ATPU)
 
 gamm_cold_ATPU <- gamm(data = extreme_cold_ATPU,
                    buffer_kestrel~ s(scale(Enterance_Area),bs="ts") +  # 
-                   s(scale(volume),bs="ts") +  # Weather
-                   s(Burrow, bs="re"), # random effect
+                   s(scale(volume),bs="ts"),  # Weather
+                   random = list(Burrow = ~1),# Burrow features # random effect
                    corr = corAR1(form = ~ 1|Burrow),
                    method = "REML")
 
