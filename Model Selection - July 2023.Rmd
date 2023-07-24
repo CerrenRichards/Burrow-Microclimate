@@ -475,7 +475,7 @@ extreme_cold_LSSP$Extreme <- "Cold Extreme"
 # MODEL S2.13
 gam_heat_lssp<- gam(data = extreme_heat_LSSP,
            buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
-                  s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(Entrance_Area),bs="ts") +  # Weather
                   s(scale(volume),bs="ts") +  # Weather
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
@@ -521,7 +521,7 @@ plot(gam_heat_lssp, pages = 1)
 # MODEL S2.14
 gamm_heat_lssp <- gamm(data = extreme_heat_LSSP,
                    buffer_kestrel~ s(scale(Canopy), bs="ts") +
-                   s(scale(Enterance_Area),bs="ts") +  # 
+                   s(scale(Entrance_Area),bs="ts") +  # 
                    s(scale(volume),bs="ts"),  # Weather
                    random = list(Burrow = ~1),# Burrow features
                    corr = corAR1(form = ~ 1|Burrow),
@@ -589,7 +589,7 @@ plot(gamm_heat_lssp$gam, pages = 1)
 # MODEL S2.15
 gam_cold_lssp<- gam(data = extreme_cold_LSSP,
            buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
-                  s(scale(Enterance_Area),bs="ts") +  # Weather
+                  s(scale(Entrance_Area),bs="ts") +  # Weather
                   s(scale(volume),bs="ts") +  # Weather
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
@@ -634,7 +634,7 @@ plot(gam_cold_lssp, pages = 1)
 # MODEL S2.16
 gamm_cold_lssp <- gamm(data = extreme_cold_LSSP,
                    buffer_kestrel~ s(scale(Canopy), bs="ts") +
-                   s(scale(Enterance_Area),bs="ts") +  # 
+                   s(scale(Entrance_Area),bs="ts") +  # 
                    s(scale(volume),bs="ts"),  # Weather
                    random = list(Burrow = ~1),# Burrow features
                    corr = corAR1(form = ~ 1|Burrow),
@@ -721,7 +721,7 @@ extreme_heat_ATPU$Extreme <- "Heat Extreme"
 ```{r}
 # MODEL S2.17
 gam_heat_ATPU<- gam(data = extreme_heat_ATPU,
-           buffer_kestrel~s(scale(Enterance_Area),bs="ts") +  # Weather
+           buffer_kestrel~s(scale(Entrance_Area),bs="ts") +  # Weather
                   s(scale(volume),bs="ts") +  # Weather
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
@@ -765,7 +765,7 @@ plot(gam_heat_ATPU, pages = 1)
 ```{r}
 # MODEL S2.18
 gamm_heat_ATPU <- gamm(data = extreme_heat_ATPU,
-                   buffer_kestrel~ s(scale(Enterance_Area),bs="ts") +  # 
+                   buffer_kestrel~ s(scale(Entrance_Area),bs="ts") +  # 
                    s(scale(volume),bs="ts"),  # Weather
                    random = list(Burrow = ~1),# Burrow features
                    corr = corAR1(form = ~ 1|Burrow),
@@ -832,7 +832,7 @@ plot(gamm_heat_ATPU$gam, pages = 1)
 ```{r}
 ## MODEL S2.19
 gam_cold_ATPU<- gam(data = extreme_cold_ATPU,
-           buffer_kestrel~s(scale(Enterance_Area),bs="ts") +  # Weather
+           buffer_kestrel~s(scale(Entrance_Area),bs="ts") +  # Weather
                   s(scale(volume),bs="ts") +  # Weather
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
@@ -876,7 +876,7 @@ plot(gam_cold_ATPU, pages = 1)
 ```{r}
 # Model S2.20
 gamm_cold_ATPU <- gamm(data = extreme_cold_ATPU,
-                   buffer_kestrel~ s(scale(Enterance_Area),bs="ts") +  # 
+                   buffer_kestrel~ s(scale(Entrance_Area),bs="ts") +  # 
                    s(scale(volume),bs="ts"),  # Weather
                    random = list(Burrow = ~1),# Burrow features # random effect
                    corr = corAR1(form = ~ 1|Burrow),
