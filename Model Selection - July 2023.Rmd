@@ -1,7 +1,6 @@
 ---
-title: "Supplementary Material 1 - Model Selection Procedure for Drivers of Burrow Microclimate"
+title: "Supplementary Material 2 - Model Selection Procedure for Correlates of Burrow Microclimate and Buffering Capacity"
 subtitle: "Burrows buffer nest temperatures and offer a stable thermal microclimate for threatened seabird chicks during extreme events"
-author: '[Cerren Richards](https://www.cerrenrichards.com)'
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   pdf_document:
@@ -27,15 +26,16 @@ library(DHARMa); library(lme4); library(mgcViz); library(mgcv);library(dsm);libr
 
 Here we show the steps followed to test for correlation between external environmental conditions and petrel burrow thermal environment.
 
-We tested a variety of models including GAM, BAM, and GAMM. Additionally we tried different methods of accounting for autocorrelation. 
+We tested a variety of models including GAM and GAMM. Additionally we tried different methods of accounting for autocorrelation. 
 
 
-## Initial Models
+## Model S2.1, S2.2 and S2.3 - Initial Models
 
 Run three initial models to identify whether the weather variables should be fitted as spline terms, a spline interaction term or linear interaction term. 
 
 ```{r, warning = FALSE, message=FALSE}
 
+# MODEL S2.1
 # Model with spline fits
 m1_petrel <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
@@ -45,16 +45,16 @@ m1_petrel <- gam(data = lssp,
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
-
+# MODEL S2.2
 # Explore temp-wind interaction term
 m2_petrel <- gam(data = lssp,
-           Inside~s(scale(Temperature), scale(Wind.Speed)) +
+           Inside~s(scale(Temperature), scale(Wind.Speed), bs="ts") +
                   s(Time, bs="cc") + # Time
                   s(julian, bs="ts") + # Date
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
-
+# MODEL S2.3
 # Explore Linear interaction 
 m3_petrel <- gam(data = lssp,
            Inside~scale(Temperature) * scale(Wind.Speed) + 
@@ -82,14 +82,15 @@ summary(m2_petrel)
 
 ```
 
-## Increase the knots for Julian date
+## Model S2.4 - Increase the knots for Julian date
 
 From the summary table of `m2_petrel`, the edf is close to the ref.df, indicating that the knots may need to be increased. Here we double the knots to 20.
 
 ```{r, warning = FALSE, message=FALSE}
 
+# MODEL S2.4
 m4_petrel <- gam(data = lssp,
-           Inside~s(scale(Temperature), scale(Wind.Speed)) +
+           Inside~s(scale(Temperature), scale(Wind.Speed), bs="ts") +
                   s(Time, bs="cc") + # Time
                   s(julian, bs="ts", k = 20) + # Date
                   s(Burrow, bs="re"), # random effect
@@ -105,9 +106,10 @@ summary(m4_petrel)
 
 ```
 
-## Increase the knots again for Julian date
+## Model S2.5 - Increase the knots again for Julian date
 ```{r, warning = FALSE, message=FALSE}
 
+# MODEL S2.5
 m5_petrel <- gam(data = lssp,
            Inside~s(scale(Temperature), scale(Wind.Speed)) +
                   s(Time, bs="cc") + # Time
@@ -140,136 +142,19 @@ AIC(m2_petrel, m4_petrel, m5_petrel)
 
 **Test for temporal autocorrelation**
 
-The model `m5_petrel` is highly autocorrelated, therefore, we reject this model. Next we will explore a `bam` model instead.
+The model `m5_petrel` is highly autocorrelated, therefore, we reject this model.
 ```{r, out.width = '60%', fig.align = "center"}
 acf(residuals(m5_petrel))
 ```
 
 
-## `BAM` model
-
-```{r, warning = FALSE, message=FALSE, out.width = '60%', fig.align = "center"}
-
-## No data were recorded from the forest plot weather station at 2021-09-11 08:30:00. 
-## The following code needs equal number of rows to run the model.
-## We will therefore filter out the data at this timepoint for the open plot burrows.
-lssp2 <- lssp %>% filter(datetime != "2021-09-11 08:30:00") 
-
-
-# Model formulae
-base_form <- Inside ~ s(scale(Temperature), scale(Wind.Speed)) +
-  s(Time, bs = "cc") +
-  s(julian, bs = "ts", k = 40)
-# add the random effect for use in bam(). It is specified differently in gamm()
-form <- update(base_form, . ~ . + s(Burrow, bs = "re") )
-
-# Now deal with autocorrelation.
-# First time through with no AR(1) process to get initial rho estimate
-bam0_petrel <- bam(formula = form, data = lssp2, method = "REML")
-acf.vals <- acf(residuals(bam0_petrel))
-
-
-# We will use the estimated autocorrelation at lag 1 from the plot as our initial
-# value of rho.
-init.rho <- acf.vals$acf[2]
-
-# Unlike gamm(), we need to explicitly tell bam() about the structure of the 
-# data, that the data for each petrel burrow is 2172 rows long. We create a vector
-# ar.strt to pass as the AR.start parameter to bam(). This vector has a TRUE
-# at the position where each burrow's data starts, that is, every 2172 rows
-# in our case.
-nBurrow <- length(unique(lssp2$Burrow))
-ar.strt <- rep(c(TRUE, rep(FALSE, (nrow(lssp2)/nBurrow) - 1)), 
-               length(unique(lssp2$Burrow)))
-
-# Set up a vector called rho to contain all the values we'd like to try for the
-# autocorrelation parameter. We will try all values from 90% to 110% of the 
-# initial value computed above, with a step of 0.01 between each one.
-# 
-# The idea is to re-run the model with each value of rho and find the 
-# one with the minimum REML score.
-# 
-# The "REML <- " part in the next line is just to initialize REML as a vector
-# of the same length as rho.
-REML <- rho <- seq(from = round(init.rho * 0.9, 2), 
-         to = min(0.99, round(init.rho * 1.1, 2)),
-         by = 0.01)
-
-# Run each model
-for(i in 1:length(rho)) {
-  message("Doing rho = ", rho[i])
-  bam1_petrel <- bam(
-    formula = form,
-    rho = rho[i],
-    AR.start = ar.strt,
-    data = lssp2,
-    method = "REML"
-  )
-  REML[i] <- bam1_petrel$gcv.ubre # Save the REML score
-}
-
-
-# Now add it to the final model
-bam2_petrel <- bam(
-    formula = form,
-    rho = rho[which.min(REML)],
-    AR.start = ar.strt,
-    data = lssp2,
-    method = "REML"
-)
-
-
-```
-
-
-**Model Summary - BAM**
-```{r, echo=FALSE}
-
-summary(bam2_petrel)
-
-```
-
-
-## Explore model fit
-
-**Test for temporal autocorrelation**
-
-Correlated residuals
-
-```{r, out.width = '60%', fig.align = "center"}
-acf(residuals(bam2_petrel))
-```
-
-These are the uncorrelated residuals after applying AR(1)
-
-```{r, out.width = '60%', fig.align = "center"}
-acf(bam2_petrel$std.rsd)
-```
-
-
-**Gam.check**
-
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-
-gam.check(bam2_petrel)
-
-```
-
-
-**Plotting**
-
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-plot(bam2_petrel, scheme = 2, pages = 1)
-```
-
-
-
-## `GAMM` with corAR1
+## Model S2.6 - `GAMM` with corAR1
 
 We will also explore the GAMM option with burrow as a random effect and include a corAR1 term to account for autocorrelation. We removed the date and time terms because the corAR1 term is accounting for the autocorrelation. 
 
 ```{r}
 
+# MODEL S2.6
 gamm1_petrel <- gamm(data = lssp,
                    Inside~s(scale(Temperature), scale(Wind.Speed)),
                    random = list(Burrow = ~1),# Burrow features
@@ -366,12 +251,13 @@ plot(atpu.wind$Wind.Speed, atpu.wind$Inside)
 ```
 
 
-## Initial models
+## Model S2.7, S2.8, and S2.9 - Initial models
 
 Run three initial models to identify whether the weather variables should be fitted as spline terms, a spline interaction term or linear interaction term. 
 
 ```{r, warning = FALSE, message=FALSE}
 
+# MODEL S2.7
 # Model with spline fits
 m1_puffin <- gam(data = atpu.wind,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
@@ -381,7 +267,7 @@ m1_puffin <- gam(data = atpu.wind,
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
-
+# MODEL S2.8
 # Explore temp-wind interaction term
 m2_puffin <- gam(data = atpu.wind,
            Inside~s(scale(Temperature), scale(Wind.Speed)) +
@@ -390,7 +276,7 @@ m2_puffin <- gam(data = atpu.wind,
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
-
+# MODEL S2.9
 # Explore Linear interaction 
 m3_puffin <- gam(data = atpu.wind,
            Inside~scale(Temperature) * scale(Wind.Speed) + 
@@ -420,11 +306,12 @@ summary(m2_puffin)
 ```
 
 
-## Increase the knots for Julian date
+## Model S2.10 - Increase the knots for Julian date
 
 From the summary table of `m2_puffin`, the edf is close to the ref.df, indicating that the knots may need to be increased. Here we double the knots to 20. 
 
 ```{r}
+# MODEL S2.10
 m4_puffin <- gam(data = atpu.wind,
              Inside~s(scale(Temperature), scale(Wind.Speed)) +
                   s(Time, bs="cc") + 
@@ -453,11 +340,12 @@ AIC(m2_puffin, m4_puffin)
 ```
 
 
-## Increase the knots for the interaction term
+## Model S2.11 - Increase the knots for the interaction term
 
 From the summary table of `m4_puffin`, the edf is close to the ref.df, indicating that the knots may need to be increased. Here we double to knots to 60. 
 
 ```{r}
+# MODEL S2.11
 m5_puffin <- gam(data = atpu.wind,
              Inside~s(scale(Temperature), scale(Wind.Speed), k = 60) +
                   s(Time, bs="cc") + 
@@ -487,135 +375,19 @@ AIC(m4_puffin, m5_puffin)
 
 **Test for temporal autocorrelation**
 
-The model `m5_puffin` is highly autocorrelated, therefore, we reject this model. Next we will explore a `bam` model instead.
+The model `m5_puffin` is highly autocorrelated, therefore, we reject this model. 
 
 ```{r, out.width = '60%', fig.align = "center"}
 acf(residuals(m5_puffin))
 ```
 
 
-
-## `BAM` model
-
-```{r, warning = FALSE, message=FALSE, out.width = '60%', fig.align = "center"}
-# Model formulae. 
-
-base_form <- Inside ~ s(Temperature, Wind.Speed, k = 60) +
-  s(Time, bs = "cc") +
-  s(julian, bs = "ts", k = 20)
-# add the random effect for use in bam(). It is specified differently in gamm()
-form <- update(base_form, . ~ . + s(Burrow, bs = "re") )
-
-
-# Now deal with autocorrelation.
-# First time through with no AR(1) process to get initial rho estimate
-bam0_puffin <- bam(formula = form, data = atpu.wind, method = "REML")
-summary(bam0_puffin)
-acf.vals <- acf(residuals(bam0_puffin))
-
-
-# We will use the estimated autocorrelation at lag 1 from the plot as our initial
-# value of rho.
-init.rho <- acf.vals$acf[2]
-
-# Unlike gamm(), we need to explicitly tell bam() about the structure of the 
-# data, that the data for each burrow is 1548 rows long. We create a vector
-# ar.strt to pass as the AR.start parameter to bam(). This vector has a TRUE
-# at the position where each burrow's data starts, that is, every 1548 rows
-# in our case.
-nBurrow <- length(unique(atpu.wind$Burrow))
-ar.strt <- rep(c(TRUE, rep(FALSE, (nrow(atpu.wind)/nBurrow) - 1)), 
-               length(unique(atpu.wind$Burrow)))
-
-# Set up a vector called rho to contain all the values we'd like to try for the
-# autocorrelation parameter. We will try all values from 90% to 110% of the 
-# initial value computed above, with a step of 0.01 between each one.
-# 
-# The idea is to re-run the model with each value of rho and find the 
-# one with the minimum REML score.
-# 
-# The "REML <- " part in the next line is just to initialize REML as a vector
-# of the same length as rho.
-REML <- rho <- seq(from = round(init.rho * 0.9, 2), 
-         to = min(0.99, round(init.rho * 1.1, 2)),
-         by = 0.01)
-
-# Run each model
-for(i in 1:length(rho)) {
-  message("Doing rho = ", rho[i])
-  bam1_puffin <- bam(
-    formula = form,
-    rho = rho[i],
-    AR.start = ar.strt,
-    data = atpu.wind,
-    method = "REML"
-  )
-  REML[i] <- bam1_puffin$gcv.ubre # Save the REML score
-}
-
-
-# Now add it to the final model
-bam2_puffin <- bam(
-    formula = form,
-    rho = rho[which.min(REML)],
-    AR.start = ar.strt,
-    data = atpu.wind,
-    method = "REML"
-)
-
-```
-
-
-
-**Model Summary - BAM**
-```{r, echo=FALSE}
-
-summary(bam2_puffin)
-
-```
-
-
-
-## Explore model fit
-
-**Test for temporal autocorrelation**
-
-Correlated residuals
-
-```{r, out.width = '60%', fig.align = "center"}
-acf(residuals(bam2_puffin))
-```
-
-These are the uncorrelated residuals after applying AR(1)
-
-```{r, out.width = '60%', fig.align = "center"}
-acf(bam2_puffin$std.rsd)
-```
-
-
-**Gam.check**
-
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-
-gam.check(bam2_puffin)
-
-```
-
-
-**Plotting**
-
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-plot(bam2_puffin, scheme = 2, pages = 1)
-```
-
-
-
-## `GAMM` with corAR1
+## Model S2.12 - `GAMM` with corAR1
 
 We will also explore the GAMM option with burrow as a random effect and include a corAR1 term to account for autocorrelation. We removed the date and time terms because the corAR1 term is accounting for the autocorrelation. 
 
 ```{r}
-
+## Model S2.12
 gamm1_puffin <- gamm(data = atpu.wind,
                    Inside~s(scale(Temperature), scale(Wind.Speed)),
                    random = list(Burrow = ~1),# Burrow features
@@ -697,10 +469,10 @@ extreme_cold_LSSP$Extreme <- "Cold Extreme"
 ```
 
 
-## `GAM` model - Heat extreme
+## Model S2.13 - `GAM` model - Heat extreme
 
 ```{r}
-
+# MODEL S2.13
 gam_heat_lssp<- gam(data = extreme_heat_LSSP,
            buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
                   s(scale(Enterance_Area),bs="ts") +  # Weather
@@ -742,10 +514,11 @@ plot(gam_heat_lssp, pages = 1)
 ```
 
 
-## `GAMM` with corAR1 - Heat extreme
+## Model S2.14 - `GAMM` with corAR1 - Heat extreme
 
 ```{r}
 
+# MODEL S2.14
 gamm_heat_lssp <- gamm(data = extreme_heat_LSSP,
                    buffer_kestrel~ s(scale(Canopy), bs="ts") +
                    s(scale(Enterance_Area),bs="ts") +  # 
@@ -810,10 +583,10 @@ plot(gamm_heat_lssp$gam, pages = 1)
 
 
 
-## `GAM` model - Cold extreme
+## Model S2.15 - `GAM` model - Cold extreme
 
 ```{r}
-
+# MODEL S2.15
 gam_cold_lssp<- gam(data = extreme_cold_LSSP,
            buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
                   s(scale(Enterance_Area),bs="ts") +  # Weather
@@ -855,10 +628,10 @@ plot(gam_cold_lssp, pages = 1)
 ```
 
 
-## `GAMM` with corAR1 - cold extreme
+## Model S2.16 - `GAMM` with corAR1 - cold extreme
 
 ```{r}
-
+# MODEL S2.16
 gamm_cold_lssp <- gamm(data = extreme_cold_LSSP,
                    buffer_kestrel~ s(scale(Canopy), bs="ts") +
                    s(scale(Enterance_Area),bs="ts") +  # 
@@ -943,10 +716,10 @@ extreme_heat_ATPU$Extreme <- "Heat Extreme"
 ```
 
 
-## `GAM` model - Heat extreme
+## Model S2.17 - `GAM` model - Heat extreme
 
 ```{r}
-
+# MODEL S2.17
 gam_heat_ATPU<- gam(data = extreme_heat_ATPU,
            buffer_kestrel~s(scale(Enterance_Area),bs="ts") +  # Weather
                   s(scale(volume),bs="ts") +  # Weather
@@ -987,10 +760,10 @@ plot(gam_heat_ATPU, pages = 1)
 ```
 
 
-## `GAMM` with corAR1 - Heat extreme
+## Model S2.18 - `GAMM` with corAR1 - Heat extreme
 
 ```{r}
-
+# MODEL S2.18
 gamm_heat_ATPU <- gamm(data = extreme_heat_ATPU,
                    buffer_kestrel~ s(scale(Enterance_Area),bs="ts") +  # 
                    s(scale(volume),bs="ts"),  # Weather
@@ -1054,10 +827,10 @@ plot(gamm_heat_ATPU$gam, pages = 1)
 
 
 
-## `GAM` model - Cold extreme
+## Model S2.19 - `GAM` model - Cold extreme
 
 ```{r}
-
+## MODEL S2.19
 gam_cold_ATPU<- gam(data = extreme_cold_ATPU,
            buffer_kestrel~s(scale(Enterance_Area),bs="ts") +  # Weather
                   s(scale(volume),bs="ts") +  # Weather
@@ -1098,10 +871,10 @@ plot(gam_cold_ATPU, pages = 1)
 ```
 
 
-## `GAMM` with corAR1 - cold extreme
+## Model S2.20 - `GAMM` with corAR1 - cold extreme
 
 ```{r}
-
+# Model S2.20
 gamm_cold_ATPU <- gamm(data = extreme_cold_ATPU,
                    buffer_kestrel~ s(scale(Enterance_Area),bs="ts") +  # 
                    s(scale(volume),bs="ts"),  # Weather
