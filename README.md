@@ -4,6 +4,7 @@ This repository contains the R code required to replicate the analyses in **Rich
 
 ## Scripts
 `Puffin and petrel - nov 11th 2021.Rmd` The R Markdown file that contains the code for the analysis.
+`Model Selection - July 2023.Rmd` The R Markdown file to create Supplementary Material 2 to show the model selection steps.
 
 
 ## Data
