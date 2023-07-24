@@ -62,7 +62,7 @@ Combine all the separate burrow .csv files
 
 ```{r}
 
-setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/2021/Temp data 2021/ATPU edited")
+setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Temp data 2021/ATPU edited")
 
 # Read in all the files at once
 # Make a list of all the .csv files
@@ -70,7 +70,6 @@ files <- list.files(pattern="*.csv")
 
 # First apply read.csv, then rbind
 temps <- do.call(rbind, lapply(files, function(x) read.csv(x, stringsAsFactors = FALSE)))
-
 
 ```
 
@@ -93,7 +92,7 @@ temps$datetime<- round_date(temps$time_NL, "15 minutes")
 # Extract only the hour for making plots
 temps$Time <- hour(temps$datetime) + minute(temps$datetime)/60
 
-# Filter the data for before the loggers were placed in the burrows 
+# Filter the data from before the loggers were placed in the burrows 
 # and after they were removed
 # Also for when the kestrel weather stations were placed, so everything matches up
 temps <- temps %>% filter(datetime >= "2021-07-17 17:00:00") %>% 
@@ -103,9 +102,9 @@ temps <- temps %>% filter(datetime >= "2021-07-17 17:00:00") %>%
 
 ## Match the logger numbers to the data
 
-Match the information on the burrows that link to the logger data
+Match the information on the burrows that link to the logger data.
 
-*** theres an issue with joining - more rows are added ?
+Some of the loggers were not found at the end of the season. They were likely kicked out by the puffins as they excavated the burrows, or physically removed. 
 
 Missing Outside logger - Burrow 6
 Missing Inside logger - Burrows 1, 2, 3, 15, 21, 27, 29
@@ -113,10 +112,13 @@ Missing Inside logger - Burrows 1, 2, 3, 15, 21, 27, 29
 ```{r}
 setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Temp data 2021")
 
-loggers <- read.csv("Burrow_Logger.csv")
+# join the plot type data
+plotdat <- read.csv("plotdata2021.csv")
 
-library(dplyr)
+# Join burrow data info
+loggers <- left_join(loggers, plotdat)
 
+# Join to temp data
 temps <- left_join(temps, loggers, by = "ID")
 
 ## save the formatted file
@@ -126,12 +128,12 @@ write.csv(temps, "ATPU_formatted_temps.csv")
 
 
 ##______________________________________________________________
-## 2. Format the PUFFIN temperature data
+## 2. Format the PETREL temperature data
 ##______________________________________________________________
 
 
 ```{r}
-setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/2021/Temp data 2021/LSSP edited")
+setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Temp data 2021/LSSP edited")
 
 files <- list.files(pattern="*.csv")
 
@@ -145,8 +147,6 @@ temps_LSSP <- do.call(rbind, lapply(files, function(x) read.csv(x, stringsAsFact
 ## Set up the date and time correctly
 
 ```{r}
-# specify the time format
-library(lubridate); library(dplyr)
 
 # Need to specify the timezone (loggers collected data in UTC)
 temps_LSSP$time <- as.POSIXct(temps_LSSP$time, format='%Y-%m-%d %H:%M', tz = "UTC")
@@ -166,8 +166,13 @@ temps_LSSP$Time <- hour(temps_LSSP$datetime) + minute(temps_LSSP$datetime)/60
 temps_LSSP <- temps_LSSP %>% filter(datetime >= "2021-08-10 18:00:00") %>% 
   filter(datetime <= "2021-09-25 00:00:00")
 
+
+setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Temp data 2021")
+
 # join the plot type data
 plotdat <- read.csv("plotdata2021.csv")
+
+# Join burrow data info
 loggers <- left_join(loggers, plotdat)
 
 #join logger data
@@ -455,7 +460,7 @@ pairs.panels(model_df_short[,c(7,8,9,12:18, 21, 24)],
 # Build initial model
 m14 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
                   s(scale(Time), bs="cc") + s(scale(julian), bs="ts")+ # Time and date
                   s(Burrow, bs="re"), # random effect
@@ -501,7 +506,7 @@ summary(m14) # edf is close to 9 for temperature and julian date, so we will dou
 m17 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(scale(Time), bs="cc") + # Time
@@ -512,7 +517,7 @@ m17 <- gam(data = lssp,
 m16 <- gam(data = lssp,
            Inside~s(scale(Temperature),  k = 4) + # Weather 
                   s(scale(Wind.Speed), k = 4) +  # Weather
-                  s(scale(Enterance_Area)) + # Burrow features
+                  s(scale(Entrance_Area)) + # Burrow features
                   s(scale(volume)) + # Burrow features
                   s(scale(Canopy)) + # Habitat
                   s(scale(Time), bs="cc") + # Time
@@ -529,7 +534,7 @@ m16 <- gam(data = lssp,
 m2 <- gamm(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(scale(Time), bs="cc") + # Time
@@ -552,7 +557,7 @@ summary(m16) # explains 66.9% of deviance
 m18 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Burrow, bs="re"), # random effect
@@ -565,7 +570,7 @@ summary(m18) # 47.3% - date and time explains 19.6% of the deviance
 m19 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Time), bs="cc") + # Time
                   s(scale(julian), bs="ts", k = 6) + # Date
@@ -579,7 +584,7 @@ summary(m19) # 66.9% - canopy explains nothing
 m20 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(scale(Time), bs="cc") + # Time
                   s(scale(julian), bs="ts", k = 6) + # Date
@@ -589,7 +594,7 @@ m20 <- gam(data = lssp,
 summary(m20) # 66.9
 
 
-# Enterance
+# Entrance
 m21 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
@@ -606,7 +611,7 @@ summary(m21) # 66.9
 # Wind
 m22 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(scale(Time), bs="cc") + # Time
@@ -620,7 +625,7 @@ summary(m22) # 66.3
 # Temp
 m23 <- gam(data = lssp,
            Inside~s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(scale(Time), bs="cc") + # Time
@@ -637,7 +642,7 @@ summary(m23) # 61.6 %
 m19 <- gam(data = lssp,
            Inside~Temperature + # Weather 
                   poly(Wind.Speed) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Burrow, bs="re"), # random effect
@@ -646,7 +651,7 @@ m19 <- gam(data = lssp,
 m20 <- gam(data = lssp,
            Inside~Temperature + # Weather 
                   poly(Wind.Speed) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
@@ -664,7 +669,7 @@ anova(m18,m19)
 
 
 lme1 <- lme(data = lssp,
-                   Inside ~ Temperature + Wind.Speed + Enterance_Area + volume + Canopy,
+                   Inside ~ Temperature + Wind.Speed + Entrance_Area + volume + Canopy,
                    random = ~ 1|Burrow,
                    corr = corARMA(p = 1, q = 1))
 
@@ -699,7 +704,7 @@ atpu$Burrow <- as.factor(atpu$Burrow)
 m1_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts") + 
                     s(scale(Wind.Speed),bs="ts") +  # Environment
-                    s(scale(Enterance_Area),bs="ts") + 
+                    s(scale(Entrance_Area),bs="ts") + 
                     s(scale(volume),bs="ts") + # Burrow features
                     s(scale(Time), bs="cc") + 
                     s(scale(julian), bs="ts")+ # Time and date
@@ -722,7 +727,7 @@ summary(m1_puffin)
 m2_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts", k = 4) + # Environment
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Time), bs="cc") + 
                   s(scale(julian), bs="ts")+ # Time and date
@@ -772,7 +777,7 @@ library(DHARMa); library(lme4); library(mgcViz); library(mgcv); library(dsm)
 m4 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc") + # Time
@@ -801,7 +806,7 @@ plot(m1)
 m8 <- gamm(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc") + # Time
@@ -833,7 +838,7 @@ plot(lssp$Temperature, lssp$Inside)
 m5 <- gam(data = lssp,
            Inside~Temperature + # Weather 
                   Wind.Speed +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc") + # Time
@@ -861,7 +866,7 @@ plot(m2)
 m3 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 4) + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc") + # Time
@@ -889,7 +894,7 @@ plot(m3)
 m6 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 5) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc") + # Time
@@ -912,7 +917,7 @@ plot(m4)
 m7 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc") + # Time
@@ -939,7 +944,7 @@ AIC(m1, m2, m3, m4, m5)
 m9 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc", k = 20) + # Time
@@ -950,7 +955,7 @@ m9 <- gam(data = lssp,
 m10 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc", k = 12) + # Time
@@ -962,7 +967,7 @@ m10 <- gam(data = lssp,
 m11 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc", k = 10) + # Time
@@ -975,7 +980,7 @@ m11 <- gam(data = lssp,
 m12 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 20) + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc") + # Time
@@ -988,7 +993,7 @@ m12 <- gam(data = lssp,
 m13 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 40) + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc") + # Time
@@ -1001,7 +1006,7 @@ m13 <- gam(data = lssp,
 m14 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts", k = 20) + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc") + # Time
@@ -1013,7 +1018,7 @@ m14 <- gam(data = lssp,
 m15 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc") + # Time
@@ -1025,7 +1030,7 @@ m15 <- gam(data = lssp,
 m16 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + # Weather 
                   s(scale(Wind.Speed),bs="ts") +  # Weather
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + # Habitat
                   s(Time, bs="cc") + # Time
@@ -1045,6 +1050,51 @@ AIC(m4, m12, m13, m14, m15, m16)
 summary(m16)
 
 plot(m15)
+
+
+
+
+m1_petrel <- gam(data = lssp,
+             Inside~s(scale(Temperature), scale(Wind.Speed)) +
+                  s(scale(Entrance_Area), bs="ts") + # Burrow
+                  s(scale(volume), bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
+
+m1_petrelb <- gam(data = lssp,
+             Inside~s(Temperature, Wind.Speed) +
+                  scale(Entrance_Area) + # Burrow
+                  scale(volume) + # Burrow features
+                  scale(Canopy) + # Habitat
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+vis.gam(m1_petrelb, view = c("Temperature", "Wind.Speed"),
+    theta = 300, n.grid = 40, lwd = 0.4, too.far = 0.1)
+
+AIC(m4, m1_petrel)
+summary(m1_petrel)
+plot(m1_petrel, scheme = 2, pages = 1)
+
+## THIS MODEL FOR LINEAR
+m3_petrel <- gam(data = lssp,
+             Inside~scale(Temperature) * scale(Wind.Speed) + # Environment
+                  s(scale(Entrance_Area), bs="ts") + # Burrow
+                  s(scale(volume), bs="ts") + # Burrow features
+                  s(scale(Canopy), bs="ts") + # Habitat
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+
 ```
 
 ## PUFFIN
@@ -1063,7 +1113,7 @@ atpu$Burrow <- as.factor(atpu$Burrow)
 m1_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts") + # Weather
                     s(scale(Wind.Speed), bs="ts") +  # Weather
-                    s(scale(Enterance_Area), bs="ts") + # Burrow
+                    s(scale(Entrance_Area), bs="ts") + # Burrow
                     s(scale(volume), bs="ts") + # Burrow features
                     s(Time, bs="cc") + # Time and date
                     s(julian, bs="ts")+ # Time and date
@@ -1072,6 +1122,7 @@ m1_puffin <- gam(data = atpu,
 
 # Model results
 summary(m1_puffin)
+gam.check(m1_)
 
 # Model fit
 vis.concurvity(m1_puffin)
@@ -1091,7 +1142,7 @@ plot(atpu$Temperature, atpu$Inside)
 m2_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts", k = 4) + # Environment
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
@@ -1107,7 +1158,7 @@ plot(atpu.wind$Wind.Speed, atpu.wind$Inside)
 m1.2_puffin <- gam(data = atpu.wind,
              Inside~s(scale(Temperature), bs="ts") + # Weather
                     s(scale(Wind.Speed), bs="ts") +  # Weather
-                    s(scale(Enterance_Area), bs="ts") + # Burrow
+                    s(scale(Entrance_Area), bs="ts") + # Burrow
                     s(scale(volume), bs="ts") + # Burrow features
                     s(Time, bs="cc") + # Time and date
                     s(julian, bs="ts")+ # Time and date
@@ -1118,7 +1169,7 @@ m1.2_puffin <- gam(data = atpu.wind,
 m1.3_puffin <- gam(data = atpu.wind,
              Inside~s(scale(Temperature), bs="ts") + # Weather
                     s(scale(Wind.Speed), bs="ts") +  # Weather
-                    s(scale(Enterance_Area), bs="ts") + # Burrow
+                    s(scale(Entrance_Area), bs="ts") + # Burrow
                     s(scale(volume), bs="ts") + # Burrow features
                     s(Time, bs="cc") + # Time and date
                     s(julian, bs="ts", k = 20)+ # Time and date
@@ -1129,7 +1180,7 @@ m1.3_puffin <- gam(data = atpu.wind,
 m1.4_puffin <- gam(data = atpu.wind,
              Inside~s(scale(Temperature), bs="ts") + # Weather
                     s(scale(Wind.Speed), bs="ts") +  # Weather
-                    s(scale(Enterance_Area), bs="ts") + # Burrow
+                    s(scale(Entrance_Area), bs="ts") + # Burrow
                     s(scale(volume), bs="ts") + # Burrow features
                     s(Time, bs="cc") + # Time and date
                     s(julian, bs="ts", k = 40)+ # Time and date
@@ -1141,7 +1192,7 @@ m1.4_puffin <- gam(data = atpu.wind,
 m5_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts") + # Environment
                   s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts", k = 20)+ # Time and date
@@ -1152,7 +1203,7 @@ m5_puffin <- gam(data = atpu,
 m5.0_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts") + # Environment
                   s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(Time, bs="cc") + 
                   s(Burrow, bs="re"), # random effect
@@ -1165,7 +1216,7 @@ plot(m5.0_puffin)
 m5.1_puffinAEB <- gam(data = atpu,
              Inside~scale(Temperature) + scale(Temperature) : scale(Wind.Speed) + # Environment
                s(scale(Wind.Speed)) +
-                  scale(Enterance_Area) + # Burrow features
+                  scale(Entrance_Area) + # Burrow features
                   scale(volume) + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts", k = 5)+ # Time and date
@@ -1178,7 +1229,7 @@ m5.1_puffinAEB <- gam(data = atpu,
 m5.1_puffinAEB <- gam(data = atpu.wind,
              Inside~scale(Temperature) + scale(Temperature) : scale(Wind.Speed) + # Environment
                s(scale(Wind.Speed)) +
-                  scale(Enterance_Area) + # Burrow features
+                  scale(Entrance_Area) + # Burrow features
                   scale(volume) + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts", k = 5)+ # Time and date
@@ -1191,7 +1242,7 @@ plot(m5.1_puffinAEB)
 
 m5.2_puffinAEB <- gam(data = atpu.wind,
              Inside ~ scale(Temperature) * scale(Wind.Speed) + # Environment
-                  scale(Enterance_Area) + # Burrow features
+                  scale(Entrance_Area) + # Burrow features
                   scale(volume) + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts", k = 5)+ # Time and date
@@ -1203,7 +1254,7 @@ m5.2_puffinAEB <- gam(data = atpu.wind,
 m1_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts") + # Weather
                     s(scale(Wind.Speed), bs="ts") +  # Weather
-                    s(scale(Enterance_Area), bs="ts") + # Burrow
+                    s(scale(Entrance_Area), bs="ts") + # Burrow
                     s(scale(volume), bs="ts") + # Burrow features
                     s(Time, bs="cc") + # Time and date
                     s(julian, bs="ts")+ # Time and date
@@ -1216,7 +1267,7 @@ AIC(m1_puffin,m5.0_puffinAEB, m6.0_puffinAEB, m6.1_puffinAEB)
 
 m6.1_puffinAEB <- gam(data = atpu.wind,
              Inside~s(scale(Temperature), scale(Wind.Speed)) +
-                  s(scale(Enterance_Area), bs="ts") + # Burrow
+                  s(scale(Entrance_Area), bs="ts") + # Burrow
                   s(scale(volume), bs="ts") + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
@@ -1227,7 +1278,7 @@ m6.1_puffinAEB <- gam(data = atpu.wind,
 
 m5.0_puffinAEB <- gam(data = atpu.wind,
              Inside~scale(Temperature) * scale(Wind.Speed) + # Environment
-                  scale(Enterance_Area) + # Burrow features
+                  scale(Entrance_Area) + # Burrow features
                   scale(volume) + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
@@ -1237,7 +1288,7 @@ m5.0_puffinAEB <- gam(data = atpu.wind,
 
 m9.0_puffinAEB <- gam(data = atpu.wind,
              Inside~Temperature * Wind.Speed + # Environment
-                  scale(Enterance_Area) + # Burrow features
+                  scale(Entrance_Area) + # Burrow features
                   scale(volume) + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
@@ -1249,7 +1300,7 @@ m9.0_puffinAEB <- gam(data = atpu.wind,
 ## THIS MODEL FOR LINEAR
 m6.0_puffinAEB <- gam(data = atpu.wind,
              Inside~scale(Temperature) * scale(Wind.Speed) + # Environment
-                  s(scale(Enterance_Area), bs="ts") + # Burrow
+                  s(scale(Entrance_Area), bs="ts") + # Burrow
                   s(scale(volume), bs="ts") + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
@@ -1258,7 +1309,7 @@ m6.0_puffinAEB <- gam(data = atpu.wind,
 
 m7_puffinAEB <- gam(data = atpu.wind,
              Inside~s(Temperature, Wind.Speed) +
-                  s(scale(Enterance_Area), bs="ts") + # Burrow
+                  s(scale(Entrance_Area), bs="ts") + # Burrow
                   s(scale(volume), bs="ts") + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
@@ -1268,7 +1319,7 @@ m7_puffinAEB <- gam(data = atpu.wind,
 
 m7.2_puffinAEB <- gam(data = atpu.wind,
              Inside~s(Temperature, Wind.Speed, k = 60) +
-                  s(scale(Enterance_Area), bs="ts") + # Burrow
+                  s(scale(Entrance_Area), bs="ts") + # Burrow
                   s(scale(volume), bs="ts") + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
@@ -1276,10 +1327,20 @@ m7.2_puffinAEB <- gam(data = atpu.wind,
                   method = "REML") 
 
 
+## THIS MODEL FOR SPLINE
+m7.3_puffinAEB <- gam(data = atpu.wind,
+             Inside~s(scale(Temperature), scale(Wind.Speed), k = 60) +
+                  s(scale(Entrance_Area), bs="ts") + # Burrow
+                  s(scale(volume), bs="ts") + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
 
 m8.0_puffinAEB <- gam(data = atpu.wind,
              Inside~s(Temperature, Wind.Speed)  + # Environment
-                  scale(Enterance_Area) + # Burrow features
+                  scale(Entrance_Area) + # Burrow features
                   scale(volume) + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
@@ -1290,18 +1351,65 @@ m8.0_puffinAEB <- gam(data = atpu.wind,
 
 m8.1_puffinAEB <- gam(data = atpu.wind,
              Inside~s(Temperature, Wind.Speed, k = 60)  + # Environment
-                  scale(Enterance_Area) + # Burrow features
+                  scale(Entrance_Area) + # Burrow features
                   scale(volume) + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
                   s(Burrow, bs="re"), # random effect
                   method = "REML") 
 
-plot(m7.2_puffinAEB, scheme = 2)
 
-gam.check(m7.2_puffinAEB)
+m8.1_puffinAEB <- gam(data = atpu.wind,
+             Inside~s(`Temperature `, `Wind.Speed `, k = 60)  + # Environment
+                  scale(Entrance_Area) + # Burrow features
+                  scale(volume) + # Burrow features
+                  s(Time, bs="cc") + 
+                  s(julian, bs="ts")+ # Time and date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+m8_puffin <- gam(data = atpu.wind,
+           Inside~s(Temperature2, Wind.Speed2, k = 60) +
+                  scale(Entrance_Area) + # Burrow features
+                  scale(volume)+ # Burrow features
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 20) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+atpu.wind$Temperature. <- scale(atpu.wind$Temperature)
+atpu.wind$Wind.Speed.  <- scale(atpu.wind$Wind.Speed)
+atpu.wind$Entrance_Area2 <- scale(atpu.wind$Entrance_Area)
+atpu.wind$volume2 <- scale(atpu.wind$volume)
+
+m8_puffin2 <- gam(data = atpu.wind,
+           Inside~s(Temperature. , Wind.Speed. , k = 60) +
+                  s(Entrance_Area2, bs="ts") + # Burrow features
+                  s(volume2, bs="ts")+ # Burrow features
+                  s(Time, bs="cc") + # Time
+                  s(julian, bs="ts", k = 20) + # Date
+                  s(Burrow, bs="re"), # random effect
+                  method = "REML") 
+
+par(mfrow = c(1,2))
+vis.gam(m8_puffin2, view = c("Temperature.", "Wind.Speed."),
+    theta = 700, n.grid = 40, lwd = 0.4, too.far = 0.1)
+
+vis.gam(m8_puffin2, view = c("Temperature.", "Wind.Speed."),
+    theta = 550, n.grid = 40, lwd = 0.4, too.far = 0.1)
+
+m8.2_puffinAEB <- gam(data = atpu.wind,
+             Inside~s(Temperature, Wind.Speed, k = 60),# Environment
+                  method = "REML") 
+
+
+plot(m7.3_puffinAEB, scheme = 2, pages = 1)
+
+plot(m7.3_puffinAEB, scheme = 2)
+
+gam.check(m7.3_puffinAEB)
 plot(m7_puffinAEB)
-summary(m6.1_puffinAEB)
+summary(m7.3_puffinAEB)
 
 plot(atpu$Temperature, atpu$Wind.Speed)
 plot(atpu.wind$Wind.Speed, atpu.wind$Temperature)
@@ -1315,19 +1423,31 @@ vis.gam(m5.0_puffinAEB, view = c("Temperature", "Wind.Speed"),
 vis.gam(m5.0_puffinAEB, view = c("Temperature", "Wind.Speed"),
     theta = 100, n.grid = 40, lwd = 0.4)
 
-vis.gam(m8.1_puffinAEB, view = c("Temperature", "Wind.Speed"),
+
+par(mfrow = c(1,2))
+vis.gam(m8.1_puffinAEB, view = c("Temperature2", "Wind.Speed2"),
     theta = 700, n.grid = 40, lwd = 0.4, too.far = 0.1)
 
-plot(m5.0_puffinAEB, scheme = 2)
+vis.gam(m8.1_puffinAEB, view = c("Temperature2", "Wind.Speed2"),
+    theta = 550, n.grid = 40, lwd = 0.4, too.far = 0.1)
+par(mfrow = c(1, 1))
+
+plot(m8_puffin2, scheme = 2)
 
 predict.gam()
+
+
+res <- simulateResiduals(m7.3_puffinAEB)
+
+testResiduals(res, plot = T)
+
 
 # predict
 
 m6_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts") + # Environment
                   s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts", k = 40)+ # Time and date
@@ -1339,7 +1459,7 @@ m6_puffin <- gam(data = atpu,
 m3_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts") + # Environment
                   s(scale(Wind.Speed),bs="ts", k = 4) +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
@@ -1349,7 +1469,7 @@ m3_puffin <- gam(data = atpu,
 m4_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts", k = 4) + # Environment
                   s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
@@ -1359,7 +1479,7 @@ m4_puffin <- gam(data = atpu,
 m4_puffin <- gam(data = atpu,
              Inside~s(scale(Temperature), bs="ts", k = 4) + # Environment
                   s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + # Burrow features
                   s(scale(volume),bs="ts") + # Burrow features
                   s(Time, bs="cc") + 
                   s(julian, bs="ts")+ # Time and date
@@ -1390,7 +1510,7 @@ summary(m1_puffin)
 
 
 atpu$datetime2 <- as.POSIXct(atpu$datetime, format='%Y-%m-%d %H:%M')
-
+atpu.wind$datetime2 <- as.POSIXct(atpu.wind$datetime, format='%Y-%m-%d %H:%M')
 
 
 # Vis.gam interaction
@@ -1405,6 +1525,11 @@ res = recalculateResiduals(res, group = atpu$datetime2)
 testTemporalAutocorrelation(res, time = unique(atpu$datetime2))
 
 
+res = simulateResiduals(m8_puffin2)
+res = recalculateResiduals(res, group = atpu.wind$datetime2)
+
+testTemporalAutocorrelation(res, time = unique(atpu.wind$datetime2))
+
 
 ```
 
@@ -1417,7 +1542,7 @@ testTemporalAutocorrelation(res, time = unique(atpu$datetime2))
 # Build initial model
 m1_buff <- gam(data = lssp,
            buffer_kestrel~s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
                   s(scale(Time), bs="cc") + s(scale(julian), bs="ts")+ # Time and date
                   s(Burrow, bs="re"), # random effect
@@ -1432,7 +1557,7 @@ plotQQunif(m1_buff)
 
 m2_buff <- gam(data = lssp,
            buffer_kestrel~s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
                   s(scale(Time), bs="cc") + s(scale(julian), bs="ts", k = 20)+ # Time and date
                   s(Burrow, bs="re"), # random effect
@@ -1543,7 +1668,7 @@ heat_ATPU <- extreme_heat_ATPU %>% group_by(Burrow) %>%
             Width = mean(Width),
             Height = mean(Height),
             Depth = mean(Depth),
-            Enterance_Area = mean(Enterance_Area),
+            Entrance_Area = mean(Entrance_Area),
             Canopy = mean(Canopy),
             Ground_cover = mean(Ground_cover))
 
@@ -1560,7 +1685,7 @@ cold_ATPU <- extreme_cold_ATPU %>% group_by(Burrow) %>%
             Width = mean(Width),
             Height = mean(Height),
             Depth = mean(Depth),
-            Enterance_Area = mean(Enterance_Area),
+            Entrance_Area = mean(Entrance_Area),
             Canopy = mean(Canopy),
             Ground_cover = mean(Ground_cover))
          
@@ -1577,7 +1702,7 @@ cold_LSSP <- extreme_cold_LSSP %>% group_by(Burrow) %>%
             Width = mean(Width),
             Height = mean(Height),
             Depth = mean(Depth),
-            Enterance_Area = mean(Enterance_Area),
+            Entrance_Area = mean(Entrance_Area),
             Canopy = mean(Canopy),
             Ground_cover = mean(Ground_cover))
        
@@ -1594,7 +1719,7 @@ heat_LSSP <- extreme_heat_LSSP %>% group_by(Burrow) %>%
             Width = mean(Width),
             Height = mean(Height),
             Depth = mean(Depth),
-            Enterance_Area = mean(Enterance_Area),
+            Entrance_Area = mean(Entrance_Area),
             Canopy = mean(Canopy),
             Ground_cover = mean(Ground_cover))
 
@@ -1615,7 +1740,7 @@ heat_ATPU <- heat_ATPU %>% drop_na()
 
 # Build initial model
 m0_heat_atpu <- lm(data = heat_ATPU, 
-                   Buffer.med ~ volume + Enterance_Area)
+                   Buffer.med ~ volume + Entrance_Area)
 # Check model fit - Not a good fit
 stats::qqnorm(m0_heat_atpu)
 plot(m0_heat_atpu)
@@ -1624,7 +1749,7 @@ summary(m0_heat_atpu)
 
 # Build initial model
 m1_heat_atpu <- gls(data = heat_ATPU, 
-                   Buffer.med ~ volume + Enterance_Area)
+                   Buffer.med ~ volume + Entrance_Area)
 
 # Check model fit - Not a good fit
 stats::qqnorm(m1_heat_atpu)
@@ -1634,7 +1759,7 @@ summary(m1_heat_atpu)
 
 # Transform the predictors
 m2_heat_atpu <- lm(data = heat_ATPU, 
-                   Buffer.med ~ log(volume) + log(Enterance_Area))
+                   Buffer.med ~ log(volume) + log(Entrance_Area))
 
 # Check model fit 
 # The transformations improved the fit slightly
@@ -1664,7 +1789,7 @@ cold_ATPU <- cold_ATPU %>% drop_na()
 
 # Build model
 m1_cold_atpu <- gls(data = cold_ATPU, 
-                   Buffer.med ~ volume + Enterance_Area)
+                   Buffer.med ~ volume + Entrance_Area)
 
 # Check model fit
 stats::qqnorm(m1_cold_atpu)
@@ -1688,7 +1813,7 @@ ggplot(cold_ATPU, aes(x = volume, y = Buffer.med)) +
 
 # Build model
 m1_heat_lssp <- gls(data = heat_LSSP, 
-                   Buffer.med ~ Canopy + volume + Enterance_Area)
+                   Buffer.med ~ Canopy + volume + Entrance_Area)
 
 
 # Check model fit
@@ -1715,7 +1840,7 @@ ggplot(heat_LSSP, aes(x = Canopy, y = Buffer.med)) +
 
 # Build model
 m1_cold_lssp <- gls(data = cold_LSSP, 
-                   Buffer.med ~  Canopy + volume + Enterance_Area)
+                   Buffer.med ~  Canopy + volume + Entrance_Area)
 
 
 # Check model fit
@@ -1762,20 +1887,20 @@ library(mgcv)
 
 
 m1 <- gamm(data = lssp,
-           buffer_kestrel~s(Enterance_Area) + s(Height) + s(Width) + s(Depth),
+           buffer_kestrel~s(Entrance_Area) + s(Height) + s(Width) + s(Depth),
            random = list(Burrow = ~1))
 
 m1 <- gamm(data = lssp,
-           buffer_kestrel~s(Enterance_Area) + s(volume),
+           buffer_kestrel~s(Entrance_Area) + s(volume),
            random = list(Burrow = ~1))
 
 m2 <- gamm(data = model_df_short,
-           buffer_kestrel~s(Enterance_Area) + s(volume),
+           buffer_kestrel~s(Entrance_Area) + s(volume),
            random = list(Burrow = ~1))
 
 
 m3 <- gamm(data = atpu,
-           Inside~s(Temperature)+ s(Enterance_Area) + s(volume) +s(Time),
+           Inside~s(Temperature)+ s(Entrance_Area) + s(volume) +s(Time),
            random = list(Burrow = ~1))
 
 hist(resid(m3$gam))
@@ -1799,7 +1924,7 @@ plot(lssp$Barometric.Pressure, lssp$Temperature)
 
 plot(model_df_short$volume, model_df_short$Inside)
 
-plot(model_df_short$Enterance_Area, model_df_short$buffer_kestrel)
+plot(model_df_short$Entrance_Area, model_df_short$buffer_kestrel)
 
 
 
@@ -1833,7 +1958,7 @@ library(mgcv)
 
 m14 <- gam(data = lssp,
            Inside~s(scale(Temperature), bs="ts") + s(scale(Wind.Speed),bs="ts") +  # Environment
-                  s(scale(Enterance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
+                  s(scale(Entrance_Area),bs="ts") + s(scale(volume),bs="ts") + # Burrow features
                   s(scale(Canopy), bs="ts") + s(scale(Ground_cover), bs="ts") + # Habitat
                   s(scale(Time), bs="cc") + s(scale(julian), bs="ts")+ # Time and date
                   s(Burrow, bs="re"), # random effect
@@ -1869,7 +1994,7 @@ summary(m14)
 
 m1 <- gamm(data = lssp,
            Inside~s(scale(Temperature)) + s(scale(Wind.Speed)) +  # Environment
-                  s(scale(Enterance_Area)) + s(scale(volume)) + # Burrow features
+                  s(scale(Entrance_Area)) + s(scale(volume)) + # Burrow features
                   s(scale(Canopy)) + s(scale(Ground_cover)) + # Habitat
                   s(scale(Time)) + s(scale(julian)), # Time and date
            random = list(Burrow = ~1))
@@ -1912,14 +2037,14 @@ ggplot(data = lssp, aes(x = ID, y = residuals))+
 # Residual model
 m13 <- gamm(data = lssp,
            residuals_lssp~s(scale(Temperature)) + s(scale(Wind.Speed))+ # Environment
-                   s(scale(Enterance_Area)) + s(scale(Height)) + # Burrow features
+                   s(scale(Entrance_Area)) + s(scale(Height)) + # Burrow features
                   s(scale(Canopy)) + s(scale(Ground_cover)), # Habitat 
            random = list(Burrow = ~1))
 
 
 
 
-plot(lssp$Enterance_Area, lssp$residuals_lssp)
+plot(lssp$Entrance_Area, lssp$residuals_lssp)
 plot(lssp$Height, lssp$residuals_lssp)
 plot(lssp$Width, lssp$residuals_lssp)
 plot(lssp$Depth, lssp$residuals_lssp)
@@ -1942,7 +2067,7 @@ plot(m10$gam)
 
 m8 <- gam(data = mean,
            mean_inside~ # Environment
-                  s(scale(Enterance_Area), k=4) + s(scale(volume), k=4) +
+                  s(scale(Entrance_Area), k=4) + s(scale(volume), k=4) +
             s(scale(Width), k=4) + s(scale(Height), k=4)+ s(scale(Depth), k=4)+# Burrow features
                   s(scale(Canopy), k=4) + s(scale(Ground_cover), k=4 ))
 
@@ -1982,7 +2107,7 @@ plot(lssp$Temperature, lssp$Date)
 # Petrel (WEATHER STATION BUFFER)
 m3 <- gamm(data = lssp,
            buffer_kestrel~ s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Entrance_Area) + s(volume) + # Burrow features
                   s(Canopy) + s(Ground_cover) + # Habitat
                   s(Time) + s(julian), # Time and date
            random = list(Burrow = ~1))
@@ -2004,7 +2129,7 @@ summary(m3$gam)
 ## Puffin 
 m2 <- gamm(data = atpu,
            Inside~s(Temperature) + s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Entrance_Area) + s(volume) + # Burrow features
                   s(Time) + s(julian), # Time and date
            random = list(Burrow = ~1))
 
@@ -2020,7 +2145,7 @@ summary(m2$gam)
 # Petrel (LOGGER BUFFER)
 m4 <- gamm(data = lssp,
            buffer_logger~s(Temperature) + s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Entrance_Area) + s(volume) + # Burrow features
                   s(Canopy) + s(Ground_cover) + # Habitat
                   s(Time) + s(julian), # Time and date
            random = list(Burrow = ~1))
@@ -2034,7 +2159,7 @@ summary(m4$gam)
 # Puffin (WEATHER STATION BUFFER)
 m5 <- gamm(data = atpu,
            buffer_kestrel~ s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Entrance_Area) + s(volume) + # Burrow features
                   s(Time) + s(julian), # Time and date
            random = list(Burrow = ~1))
 
@@ -2046,7 +2171,7 @@ summary(m5$gam)
 # Petrel (LOGGER BUFFER)
 m6 <- gamm(data = atpu,
            buffer_logger~s(Temperature) + s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(volume) + # Burrow features
+                  s(Entrance_Area) + s(volume) + # Burrow features
                   s(Time) + s(julian), # Time and date
            random = list(Burrow = ~1))
 
@@ -2059,7 +2184,7 @@ summary(m6$gam)
 
 m7 <- gamm(data = lssp,
            Inside~s(Temperature) + s(Wind.Speed) +  # Environment
-                  s(Enterance_Area) + s(Height) + s(Width) + s(Depth)+ # Burrow features
+                  s(Entrance_Area) + s(Height) + s(Width) + s(Depth)+ # Burrow features
                   s(Canopy) + s(Ground_cover) + # Habitat
                   s(Time) + s(julian), # Time and date
            random = list(Burrow = ~1))
@@ -2093,7 +2218,7 @@ summary(m7$gam)
 ## Heat model two species
 
 m1_heat <- lme(data = heat,
-              Buffer ~  volume + Enterance_Area + Canopy,
+              Buffer ~  volume + Entrance_Area + Canopy,
               random = ~1|Species, method = "ML")
 
 plot(m1_heat)
@@ -2104,7 +2229,7 @@ summary(m1_heat)
 
 
 m1_cold <- lme(data = cold,
-              Buffer ~  volume + Enterance_Area + Canopy,
+              Buffer ~  volume + Entrance_Area + Canopy,
               random = ~1|Species, method = "ML")
 
 
@@ -3778,8 +3903,8 @@ burrow_means <- burrows %>% group_by(Species) %>%
             height.sd = sd(Height, na.rm =T),
             depth = mean(Depth, na.rm =T),
             depth.sd = sd(Depth, na.rm =T),
-            enter.area = mean(Enterance_Area, na.rm =T),
-            enter.area.sd = sd(Enterance_Area, na.rm =T))
+            enter.area = mean(Entrance_Area, na.rm =T),
+            enter.area.sd = sd(Entrance_Area, na.rm =T))
 
 
 
@@ -4061,6 +4186,8 @@ print(x1)
 
 
 ```
+
+
 
 
 
