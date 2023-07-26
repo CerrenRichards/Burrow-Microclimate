@@ -50,8 +50,45 @@ X. Summary Information
 
 X. Change Point Analysis
 
+
 ##______________________________________________________________
-## 1. Format the PUFFIN temperature data
+## 1. Format the metadata
+##______________________________________________________________
+
+Create one dataframe with all the metadata to be joined to the burrow temperature data of each species.
+
+```{r}
+setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Temp data 2021")
+
+# read plot type metadata
+plotdat <- read.csv("plotdata2021.csv")
+
+# Read logger metadata
+loggers <- read.csv("Burrow_Logger.csv")
+
+# read in the burrow feature metadata
+burrows <- read.csv("burrow_features.csv")
+
+# Select the columns that we want to join to the model_df
+burrows <- burrows %>% select(Species, Burrow, Lat, Long, Width, Height, Depth, Entrance_Area, Canopy)
+
+# Join metadata dataframes
+metadata <- left_join(loggers, plotdat) %>%
+                left_join(., burrows) 
+
+# replace species abbreviations for full names
+metadata$Species[metadata$Species == "ATPU"] <- "Atlantic puffin"
+metadata$Species[metadata$Species == "LSSP"] <- "Leach's storm-petrel"
+
+# specify the order of the colours
+metadata$Location <- factor(metadata$Location, levels=c("Outside", "Inside"))
+
+```
+
+
+
+##______________________________________________________________
+## 2. Format the PUFFIN temperature data
 ##______________________________________________________________
 
 ## Combine all the files
@@ -100,9 +137,8 @@ temps <- temps %>% filter(datetime >= "2021-07-17 17:00:00") %>%
 
 ```
 
-## Match the logger numbers to the data
+## Format the Metadata
 
-Match the information on the burrows that link to the logger data.
 
 Some of the loggers were not found at the end of the season. They were likely kicked out by the puffins as they excavated the burrows, or physically removed. 
 
@@ -110,13 +146,7 @@ Missing Outside logger - Burrow 6
 Missing Inside logger - Burrows 1, 2, 3, 15, 21, 27, 29
 
 ```{r}
-setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Temp data 2021")
 
-# join the plot type data
-plotdat <- read.csv("plotdata2021.csv")
-
-# Join burrow data info
-loggers <- left_join(loggers, plotdat)
 
 # Join to temp data
 temps <- left_join(temps, loggers, by = "ID")
@@ -128,7 +158,7 @@ write.csv(temps, "ATPU_formatted_temps.csv")
 
 
 ##______________________________________________________________
-## 2. Format the PETREL temperature data
+## 3. Format the PETREL temperature data
 ##______________________________________________________________
 
 
@@ -240,7 +270,7 @@ model_df<- ATPU_LSSP %>%
   spread(key = Location, value = temp)
 
 # Select the columns that we want to join to the model_df
-burrows <- burrows %>% select(Species, Burrow, Elevation:Proportion_fern)
+burrows <- burrows %>% select(Species, Burrow, Lat, Long, Width, Height, Depth, Entrance_Area, Canopy)
 
 # Join the burrow feature data to the model_df dataframe
 model_df <- left_join(model_df, burrows)
@@ -252,6 +282,7 @@ model_df <- left_join(model_df, burrows)
 # We will therefore exclude burrow 9 data also 
 model_df <- model_df %>% 
   filter(!Burrow %in% c(1, 2, 3, 9, 15, 21, 27, 29))
+
 
 ## **************************
 ## NOTE: Burrow 36 is missing a width - because it had two burrow entrances
