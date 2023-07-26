@@ -276,138 +276,71 @@ temps_LSSP$Time <- hour(temps_LSSP$datetime) + minute(temps_LSSP$datetime)/60
 temps_LSSP <- temps_LSSP %>% filter(datetime >= "2021-08-10 18:00:00") %>% 
   filter(datetime <= "2021-09-25 00:00:00")
 
-
-setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Temp data 2021")
-
-# join the plot type data
-plotdat <- read.csv("plotdata2021.csv")
-
-# Join burrow data info
-loggers <- left_join(loggers, plotdat)
-
-#join logger data
-temps_LSSP <- left_join(temps_LSSP, loggers, by = "ID")
-
-
-# Save the formatted data
-write.csv(temps_LSSP, "petrel_temps_formatted.csv")
-
-```
-
-
-##______________________________________________________________
-## 3. Join the formatted puffin and petrel data
-##______________________________________________________________
-
-ATPU = Atlantic puffin
-LSSP = Leach's storm-petrel
-
-```{r}
-## For reading in the data if the above steps have already been done:
-setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Temp data 2021")
-temps <- read.csv('ATPU_formatted_temps.csv')
-temps_LSSP <- read.csv('petrel_temps_formatted.csv')
-temps <- temps %>% filter(datetime >= "2021-07-17 17:00:00")
-
-
-## join the puffin and petrel data
-ATPU_LSSP <- rbind(temps, temps_LSSP)
-
-# specify the order of the colours
-ATPU_LSSP$Location <- factor(ATPU_LSSP$Location, levels=c("Outside", "Inside"))
-
-# replace species abbreviations for full names
-ATPU_LSSP$Species[ATPU_LSSP$Species == "ATPU"] <- "Atlantic puffin"
-ATPU_LSSP$Species[ATPU_LSSP$Species == "LSSP"] <- "Leach's storm-petrel"
-
-# If loading the data in as the formatted files, will need to reset the datetime as posixct
-ATPU_LSSP$datetime <- as.POSIXct(ATPU_LSSP$datetime, format='%Y-%m-%d %H:%M')
-
 # add the date
-ATPU_LSSP$Date <- as.Date(ATPU_LSSP$datetime)
+temps_LSSP$Date <- as.Date(temps_LSSP$datetime)
 
 ```
 
-## Join the burrow features to the dataframe of temperatures
+## Join the metadata to the temperature file
 
 ```{r}
-library(tidyr);library(dplyr)
 
-setwd('/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data')
+# Join metadata to temp data 
+temps_LSSP <- left_join(temps_LSSP, metadata, by = "ID")
 
-# read in the burrow data
-burrows <- read.csv("burrow_features.csv")
-
-# replace species abbreviations for full names
-burrows$Species[burrows$Species == "ATPU"] <- "Atlantic puffin"
-burrows$Species[burrows$Species == "LSSP"] <- "Leach's storm-petrel"
-
-# Create the dataframe for modelling and further analyses
 # Spread the dataframe so that there is an individual 
 # column for internal and external temperatures
-model_df<- ATPU_LSSP %>% 
-  select(datetime, Date, Time, Species, Burrow, Location, Plot, temp) %>% 
+temps_LSSP <- temps_LSSP %>% 
+  select(datetime, Date, Time, Species:Canopy, temp) %>% 
   spread(key = Location, value = temp)
-
-# Select the columns that we want to join to the model_df
-burrows <- burrows %>% select(Species, Burrow, Lat, Long, Width, Height, Depth, Entrance_Area, Canopy)
-
-# Join the burrow feature data to the model_df dataframe
-model_df <- left_join(model_df, burrows)
-
-# The following burrows lost loggers, so we will remove them from the dataframe
-# Missing Outside logger - Burrow 6
-# Missing Inside logger - Burrows 1, 2, 3, 15, 21, 27, 29
-# Internal logger from burrow 9 was found on the ground outside the burrow -
-# We will therefore exclude burrow 9 data also 
-model_df <- model_df %>% 
-  filter(!Burrow %in% c(1, 2, 3, 9, 15, 21, 27, 29))
-
-
-## **************************
-## NOTE: Burrow 36 is missing a width - because it had two burrow entrances
-## NOTE: Burrow 6 does not have external logger data
-## **************************
-
 
 ```
 
-##______________________________________________________________
-## 4. Format the weather data
-##______________________________________________________________
-
-
 ## Join the weather data to the burrow temperature data
-
-weather1_forest = "Forested Plot"
-weather2_open = "Open Plot"
 
 The kestrel weather stations were placed in different plots, so we need to make sure the correct weather data is matched up to the logger data
 
 ```{r}
 
 # Subset the logger data by the plot type that match the kestrel weather station data
-open <- model_df %>% filter(Plot %in% c("Slope", "Open"))
-forest <- model_df %>% filter(Plot %in% c("Forest", "Near Forest"))
+open <- temps_LSSP %>% filter(Plot == "Open")
+forest <- temps_LSSP %>% filter(Plot %in% c("Forest", "Near Forest"))
 
 # Join the kestrel weather data and the temp logger data
-forest_join <- left_join(forest, weather1_forest)
-open_join <- left_join(open, weather2_open)
+forest <- left_join(forest, weather1_forest)
+open <- left_join(open, weather2_open)
 
 # join the data back together again
-model_df_long <- rbind(forest_join, open_join)
+temps_LSSP <- rbind(forest, open)
 
 # kestrel weather data were only recorded every 30 minutes 
 # while logger data were every 15 minutes
 # we will filter the logger data so it matches the kestrel data
-model_df_short <- model_df_long %>% filter(!is.na(Temperature))
-
+temps_LSSP <- temps_LSSP %>% filter(!is.na(Temperature))
 
 ```
 
 
+
+
 ##______________________________________________________________
-## 5. Calculate the burrow temperature buffering
+## 5. Join the formatted puffin and petrel data
+##______________________________________________________________
+
+```{r}
+
+# Join both dataframes
+ATPU_LSSP <- rbind(temps, temps_LSSP)
+  
+# save file 
+write.csv(ATPU_LSSP, "Supplementary Material 1 - Data.csv")
+
+```
+
+
+
+##______________________________________________________________
+## 6. Calculate the burrow temperature buffering
 ##______________________________________________________________
 
 negative = inside colder than outside
