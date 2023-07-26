@@ -135,24 +135,38 @@ temps$Time <- hour(temps$datetime) + minute(temps$datetime)/60
 temps <- temps %>% filter(datetime >= "2021-07-17 17:00:00") %>% 
   filter(datetime <= "2021-08-19 00:00:00")
 
+# add the date
+temps$Date <- as.Date(temps$datetime)
+
 ```
 
-## Format the Metadata
+## Join the metadata to the temperature file
 
-
-Some of the loggers were not found at the end of the season. They were likely kicked out by the puffins as they excavated the burrows, or physically removed. 
+Some of the loggers were not found at the end of the season. 
+They were likely kicked out by the puffins as they excavated the burrows, or physically removed. 
 
 Missing Outside logger - Burrow 6
-Missing Inside logger - Burrows 1, 2, 3, 15, 21, 27, 29
+Missing Inside logger - Burrows 2, 3, 15, 21, 27, 29
+Internal logger from burrow 9 was found on the ground outside the burrow. 
+
+NOTE: 
+Burrow 36 is missing a width - because it had two burrow entrances
+Burrow 21 missing depth data
 
 ```{r}
 
+# Join metadata to temp data 
+temps <- left_join(temps, metadata, by = "ID")
 
-# Join to temp data
-temps <- left_join(temps, loggers, by = "ID")
+# Spread the dataframe so that there is an individual 
+# column for internal and external temperatures
+temps <- temps %>% 
+  select(datetime, Date, Time, Species:Canopy, temp) %>% 
+  spread(key = Location, value = temp)
 
-## save the formatted file
-write.csv(temps, "ATPU_formatted_temps.csv")
+# Filter out the burrows with missing internal temperature data
+temps <- temps %>% 
+  filter(!Burrow %in% c(2, 3, 9, 15, 21, 27, 29))
 
 ```
 
