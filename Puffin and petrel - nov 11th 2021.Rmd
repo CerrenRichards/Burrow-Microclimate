@@ -85,10 +85,60 @@ metadata$Location <- factor(metadata$Location, levels=c("Outside", "Inside"))
 
 ```
 
+##______________________________________________________________
+## 2. Format the weather data
+##______________________________________________________________
+
+
+```{r}
+
+setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Weather Data 2021/Edited")
+
+# Read in the weather data from the two kestrel weather meters
+weather1_forest <- read.csv("WEATHER_kestrel2581085.csv")
+weather2_open <- read.csv("WEATHER_kestrel2581086.csv")
+
+
+# Substitute the "p.m." and "a.m." because there are issues when converting 12hrs to 24hrs
+weather1_forest$datetime <- gsub("p.m.", "pm", weather1_forest$datetime)
+weather1_forest$datetime <- gsub("a.m.", "am", weather1_forest$datetime)
+
+weather2_open$datetime <- gsub("p.m.", "pm", weather2_open$datetime)
+weather2_open$datetime <- gsub("a.m.", "am", weather2_open$datetime)
+
+# Convert the time from 12 hrs to 24 hrs
+weather1_forest$datetime <- as.POSIXct(weather1_forest$datetime, format="%Y-%m-%d %I:%M:%S %p")
+weather2_open$datetime <- as.POSIXct(weather2_open$datetime, format="%Y-%m-%d %I:%M:%S %p")
+
+library(dplyr);library(lubridate)
+# Filter the data for the correct date range
+weather1_forest <- weather1_forest %>% filter(datetime <= "2021-09-25 00:00:00")
+weather2_open <- weather2_open %>% filter(datetime <= "2021-09-25 00:00:00")
+
+# Extract only the hour for making plots
+weather1_forest$Time <- hour(weather1_forest$datetime) + minute(weather1_forest$datetime)/60
+weather2_open$Time <- hour(weather2_open$datetime) + minute(weather2_open$datetime)/60
+
+# Add a single date column
+weather1_forest$Date <- as.Date(weather1_forest$datetime)
+weather2_open$Date <- as.Date(weather2_open$datetime)
+
+# Assign station name
+weather1_forest$WeatherStation <- "Forested Plot"
+weather2_open$WeatherStation <- "Open Plot"
+
+weather1_forest <- weather1_forest %>% select(datetime, Date, Time, WeatherStation, Temperature, Wind.Speed)
+weather2_open <- weather2_open %>% select(datetime, Date, Time, WeatherStation, Temperature, Wind.Speed)
+
+# Join the two weather dataframes
+weather <- rbind(weather1_forest, weather2_open)
+
+```
+
 
 
 ##______________________________________________________________
-## 2. Format the PUFFIN temperature data
+## 3. Format the PUFFIN temperature data
 ##______________________________________________________________
 
 ## Combine all the files
@@ -170,9 +220,25 @@ temps <- temps %>%
 
 ```
 
+## Join the weather data to the burrow temperature data
+
+```{r}
+
+# join dataframes
+temps <- left_join(temps, weather2_open)
+
+# kestrel weather data were only recorded every 30 minutes 
+# while logger data were every 15 minutes
+# we will filter the logger data so it matches the kestrel data
+temps <- temps %>% filter(!is.na(Temperature))
+
+```
+
+
+
 
 ##______________________________________________________________
-## 3. Format the PETREL temperature data
+## 4. Format the PETREL temperature data
 ##______________________________________________________________
 
 
@@ -311,52 +377,10 @@ model_df <- model_df %>%
 ##______________________________________________________________
 
 
-```{r}
-
-setwd("/Users/cerren/Desktop/PhD 2021/1. Microclimate temp/Data/2021 Data/Weather Data 2021/Edited")
-
-# Read in the weather data from the two kestrel weather meters
-weather1 <- read.csv("WEATHER_kestrel2581085.csv")
-weather2 <- read.csv("WEATHER_kestrel2581086.csv")
-
-
-# Substitute the "p.m." and "a.m." because there are issues when converting 12hrs to 24hrs
-weather1$datetime <- gsub("p.m.", "pm", weather1$datetime)
-weather1$datetime <- gsub("a.m.", "am", weather1$datetime)
-
-weather2$datetime <- gsub("p.m.", "pm", weather2$datetime)
-weather2$datetime <- gsub("a.m.", "am", weather2$datetime)
-
-# Convert the time from 12 hrs to 24 hrs
-weather1$datetime <- as.POSIXct(weather1$datetime, format="%Y-%m-%d %I:%M:%S %p")
-weather2$datetime <- as.POSIXct(weather2$datetime, format="%Y-%m-%d %I:%M:%S %p")
-
-library(dplyr);library(lubridate)
-# Filter the data for the correct date range
-weather1 <- weather1 %>% filter(datetime <= "2021-09-25 00:00:00")
-weather2 <- weather2 %>% filter(datetime <= "2021-09-25 00:00:00")
-
-# Extract only the hour for making plots
-weather1$Time <- hour(weather1$datetime) + minute(weather1$datetime)/60
-weather2$Time <- hour(weather2$datetime) + minute(weather2$datetime)/60
-
-# Add a single date column
-weather1$Date <- as.Date(weather1$datetime)
-weather2$Date <- as.Date(weather2$datetime)
-
-# Assign station name
-weather1$Station <- "Forested Plot"
-weather2$Station <- "Open Plot"
-
-# Join the two weather dataframes
-weather <- rbind(weather1, weather2)
-
-```
-
 ## Join the weather data to the burrow temperature data
 
-weather1 = "Forested Plot"
-weather2 = "Open Plot"
+weather1_forest = "Forested Plot"
+weather2_open = "Open Plot"
 
 The kestrel weather stations were placed in different plots, so we need to make sure the correct weather data is matched up to the logger data
 
@@ -367,8 +391,8 @@ open <- model_df %>% filter(Plot %in% c("Slope", "Open"))
 forest <- model_df %>% filter(Plot %in% c("Forest", "Near Forest"))
 
 # Join the kestrel weather data and the temp logger data
-forest_join <- left_join(forest, weather1)
-open_join <- left_join(open, weather2)
+forest_join <- left_join(forest, weather1_forest)
+open_join <- left_join(open, weather2_open)
 
 # join the data back together again
 model_df_long <- rbind(forest_join, open_join)
@@ -2381,7 +2405,7 @@ The following plot has been edited further to add the locations of the extreme e
 
 # Using the data from the open plot weather station to create the tile plot
 
-ggplot(weather2, aes(x = Date, y = Time, fill = Temperature)) +
+ggplot(weather2_open, aes(x = Date, y = Time, fill = Temperature)) +
   theme_bw(base_size = 15)+
   theme(panel.grid.major = element_blank(), # remove the major lines
         panel.grid.minor = element_blank())+
@@ -3884,7 +3908,7 @@ ggsave("weather_plot.png",
 library(ggplot2)
 
 # Weather temperature trend
-temp <- ggplot(data = weather1, aes(x = DateTime, y = Temperature))+
+temp <- ggplot(data = weather1_forest, aes(x = DateTime, y = Temperature))+
   geom_line()+
   theme_bw(base_size = 15)+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
@@ -3897,7 +3921,7 @@ temp <- ggplot(data = weather1, aes(x = DateTime, y = Temperature))+
 
 
 
-heat <- ggplot(weather2, aes(x = Date, y = Time, fill = Temperature)) +
+heat <- ggplot(weather2_open, aes(x = Date, y = Time, fill = Temperature)) +
   theme_bw(base_size = 15)+
   theme(panel.grid.major = element_blank(), # remove the major lines
         panel.grid.minor = element_blank())+
