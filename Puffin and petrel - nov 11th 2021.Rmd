@@ -335,6 +335,14 @@ ATPU_LSSP <- rbind(temps, temps_LSSP)
 # save file 
 write.csv(ATPU_LSSP, "Supplementary Material 1 - Data.csv")
 
+
+## If uploading the data from the paper, start here
+## Read the data in here
+ATPU_LSSP <- read.csv("Supplementary Material 1 - Data.csv")
+
+# Have to reassign the data
+ATPU_LSSP$Date <- as.Date(ATPU_LSSP$Date)
+
 ```
 
 
@@ -346,72 +354,37 @@ write.csv(ATPU_LSSP, "Supplementary Material 1 - Data.csv")
 negative = inside colder than outside
 positive = warmer than outside
 
-outlogger is warmer or colder than the kestrel
-
 ```{r}
-
-## How do the external loggers compare to the kestrel weather station
-# Positive = logger is warmer than kestrel
-# Negative = logger is colder than kestrel
-model_df_short$diff <- model_df_short$Outside - model_df_short$Temperature
-
-# Plot the difference
-ggplot(data = model_df_short, aes(x = datetime, y = diff, group = Burrow))+
-  geom_line(aes(colour = Burrow))+
-  plottheme+
-  theme(legend.title = element_blank())+ 
-  xlab("Date") + ylab("Temperature difference (°C)")+
-  #scale_color_viridis(discrete = TRUE, alpha = 0.5)+
-  theme(legend.position = "none")+
-  facet_wrap(~Species, scales = "free_x")+
-  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
-        strip.background = element_rect(fill="black"),
-        axis.title.x = element_blank())
-
 
 # Calculate the buffering capacity of the burrows
 # Positive – burrow is warmer than external
 # Negative – burrow is cooler than external
 
 # Logger buffer
-model_df_short$buffer_logger <- model_df_short$Inside - model_df_short$Outside
+ATPU_LSSP$buffer_logger <- ATPU_LSSP$Inside - ATPU_LSSP$Outside
 
 # kestrel buffer
-model_df_short$buffer_kestrel <- model_df_short$Inside - model_df_short$Temperature
+ATPU_LSSP$buffer_kestrel <- ATPU_LSSP$Inside - ATPU_LSSP$Temperature
 
 
 ## Calculate the elliptical cylinder volume of the burrow for the modelling
-model_df_short$volume <- pi * (model_df_short$Width/2) * (model_df_short$Height/2) * model_df_short$Depth
+ATPU_LSSP$volume <- pi * (ATPU_LSSP$Width/2) * (ATPU_LSSP$Height/2) * ATPU_LSSP$Depth
 
-## Visualise the difference in burrow volume between species
-ggplot(data = model_df_short, aes(x = Species, y = volume))+
-  geom_boxplot()+
-  plottheme
-
-
-## Save the file for modelling
-write.csv(model_df_short, "model_df_short.csv")
-model_df_short <- read.csv("model_df_short.csv")
-
-model_df_short$Date <- as.Date(model_df_short$Date)
 
 ## Set the date as Julian Days
-# model_df_short$Date <- as.Date(model_df_short$Date)
-model_df_short$julian <- format(model_df_short$Date, "%j")
+ATPU_LSSP$julian <- format(ATPU_LSSP$Date, "%j")
 
 # Julian date is currently categorical. We will set as numeric
-model_df_short$julian <- as.numeric(model_df_short$julian)
-
-library(dplyr)
+ATPU_LSSP$julian <- as.numeric(ATPU_LSSP$julian)
 
 # Filter the dataframe for the different species
 # because separate models will be run for the species
-lssp <- filter(model_df_short, Species == "Leach's storm-petrel")
-atpu <- filter(model_df_short, Species == "Atlantic puffin")
+lssp <- filter(ATPU_LSSP, Species == "Leach's storm-petrel")
+atpu <- filter(ATPU_LSSP, Species == "Atlantic puffin")
 
 # set burrow as factor
 lssp$Burrow <- factor(lssp$Burrow)
-
+atpu$Burrow <- factor(atpu$Burrow)
 
 ```
 
@@ -1581,7 +1554,7 @@ summary(m2_buff)
 
 ## Identify the extreme events
 ## Here we define "extreme" as the 1 and 99 percentiles
-quant_weather <- model_df_short %>%
+quant_weather <- ATPU_LSSP %>%
   group_by(Species) %>%
   summarise(quantile1 = quantile(Temperature, c(.01), na.rm = T),
             quantile99 = quantile(Temperature, c(.99), na.rm = T))
@@ -1589,33 +1562,33 @@ quant_weather <- model_df_short %>%
 
 ## Filter out the extreme temperatures (Leach's)
 ## COLD
-extreme_cold_LSSP <- filter(model_df_short, Temperature <= 6.5 & Species == "Leach's storm-petrel")
+extreme_cold_LSSP <- filter(ATPU_LSSP, Temperature <= 6.5 & Species == "Leach's storm-petrel")
 extreme_cold_LSSP$Extreme <- "Cold Extreme"
 
 ## Mean and SD for weather station buffering
-mean(extreme_cold_LSSP$buffer_kestrel) # 7.3838 deg C
-sd(extreme_cold_LSSP$buffer_kestrel) #1.214295
+mean(extreme_cold_LSSP$buffer_kestrel) # 7.40 deg C
+sd(extreme_cold_LSSP$buffer_kestrel) #1.20
 
 ## Mean and SD for external burrow logger buffering
-mean(extreme_cold_LSSP$buffer_logger) # 6.83 deg C
-sd(extreme_cold_LSSP$buffer_logger) #1.34
+mean(extreme_cold_LSSP$buffer_logger) # 6.85 deg C
+sd(extreme_cold_LSSP$buffer_logger) #1.33
 
 ## HOT
-extreme_heat_LSSP <- filter(model_df_short, Temperature >= 25.7 & Species == "Leach's storm-petrel")
+extreme_heat_LSSP <- filter(ATPU_LSSP, Temperature >= 25.7 & Species == "Leach's storm-petrel")
 extreme_heat_LSSP$Extreme <- "Heat Extreme"
 
 ## Mean and SD for weather station buffering
-mean(extreme_heat_LSSP$buffer_kestrel) #-9.437 deg C
-sd(extreme_heat_LSSP$buffer_kestrel) # 1.409367
+mean(extreme_heat_LSSP$buffer_kestrel) #-9.45 deg C
+sd(extreme_heat_LSSP$buffer_kestrel) # 1.39
 
 ## Mean and SD for external burrow logger buffering
-mean(extreme_heat_LSSP$buffer_logger) # -8.274 C
-sd(extreme_heat_LSSP$buffer_logger) #3.461
+mean(extreme_heat_LSSP$buffer_logger) # -8.39 C
+sd(extreme_heat_LSSP$buffer_logger) #3.47
 
 
 ## Filter out the extreme temperatures (Puffin)
 ## COLD
-extreme_cold_ATPU <- filter(model_df_short, Temperature <= 10 & Species == "Atlantic puffin")
+extreme_cold_ATPU <- filter(ATPU_LSSP, Temperature <= 10 & Species == "Atlantic puffin")
 extreme_cold_ATPU$Extreme <- "Cold Extreme"
 
 ## Mean and SD for weather station buffering
@@ -1627,7 +1600,7 @@ mean(extreme_cold_ATPU$buffer_logger, na.rm = T) # 7.75 deg C
 sd(extreme_cold_ATPU$buffer_logger, na.rm = T) # 2.064
 
 ## HOT
-extreme_heat_ATPU <- filter(model_df_short, Temperature >= 25.6 & Species == "Atlantic puffin")
+extreme_heat_ATPU <- filter(ATPU_LSSP, Temperature >= 25.6 & Species == "Atlantic puffin")
 extreme_heat_ATPU$Extreme <- "Heat Extreme"
 
 ## Mean and SD for weather station buffering
@@ -2363,7 +2336,7 @@ library(tidyr)
 ## Daily max, min and mean
 
 ## Summarise the daily max, min and mean for each burrow
-maxmin <- model_df_short %>%
+maxmin <- ATPU_LSSP %>%
   group_by(Date, Burrow, Species) %>%
   summarise(`Daily Mean` = mean(Inside),
             `Daily Max.` = max(Inside), 
@@ -2393,6 +2366,11 @@ mean$Burrow2 <- factor(mean$Burrow2, levels=mean$Burrow2)
 # Join the two dataframes
 maxmin <- left_join(maxmin, mean)
 
+## Set the theme
+plottheme <-  theme_bw(base_size = 15)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.title.y = element_text(vjust = 3)) +
+  theme(axis.title.x = element_text(vjust = -1))
 
 # create the plot
 ggplot()+
@@ -2426,14 +2404,14 @@ ggsave("maxminmean.png",
 ```{r}
 
 # Gather the data 
-maxmin_season <- model_df_short %>% 
+maxmin_season <- ATPU_LSSP %>% 
                             select(Date, Time, 
                                    Species, Outside, 
                                    Inside, Temperature) %>%
                             gather(Location, Temp, Outside:Temperature)
 
 # Give the weather station data a new name
-maxmin_season$Location[maxmin_season$Location == "Temperature"] <- "Air"
+maxmin_season$Location[maxmin_season$Location == "Temperature"] <- "Station"
 
 # Summaries the mean, max, min and sd per hour across all burrows
 # Burrow 6 is missing
@@ -2444,7 +2422,7 @@ maxmin_season <- maxmin_season %>% group_by(Time, Species, Location) %>%
              sd = sd(Temp, na.rm = T))
 
 # specify the order of the colours
-maxmin_season$Location <- factor(maxmin_season$Location, levels=c("Outside", "Air", "Inside"))
+maxmin_season$Location <- factor(maxmin_season$Location, levels=c("Outside", "Station", "Inside"))
 
 
 # Create the plot
@@ -2492,7 +2470,7 @@ extremeplot <- ggplot(extreme, aes(x = Extreme, y = buffer_kestrel)) +
 
 # Summarise the mean temperature and standard deviation for 
 # inside and outside the burrows, and for the weather station through the season
-season <- model_df_short %>%
+season <- ATPU_LSSP %>%
   group_by(Species, datetime) %>%
   summarise(mean = mean(Inside), 
             sd = sd(Inside),
@@ -2568,12 +2546,6 @@ season_mean_temp <- ATPU_LSSP %>%
   summarise(mean = mean(temp), sd = sd(temp),
             n = n(), se = sd/sqrt(n))
 
-
-## Set the theme
-plottheme <-  theme_bw(base_size = 15)+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  theme(axis.title.y = element_text(vjust = 3)) +
-  theme(axis.title.x = element_text(vjust = -1))
 
 
 ## _____________ INDIVIDUAL PLOTS _____________
