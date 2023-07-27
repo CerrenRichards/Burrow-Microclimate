@@ -685,7 +685,7 @@ ggsave("stacked_buffer_weather.png",
 
 
 ##______________________________________________________________
-## X. Summary Information
+## 9. Summary Information
 ##______________________________________________________________
 
 WEATHER
@@ -699,12 +699,8 @@ WEATHER
 library(dplyr);library(tidyr)
 
 # Summarise the mean values for each of the burrow features
-burrow_means <- burrows %>% group_by(Species) %>%
-  summarise(logger.depth = mean(Logger.depth, na.rm =T),
-            logger.depth.sd = sd(Logger.depth, na.rm =T),
-            elevation = mean(Elevation),
-            elevation.sd = sd(Elevation),
-            width = mean(Width, na.rm =T),
+burrow_means <- metadata %>% group_by(Species) %>%
+  summarise(width = mean(Width, na.rm =T), 
             width.sd = sd(Width, na.rm =T),
             height = mean(Height, na.rm =T),
             height.sd = sd(Height, na.rm =T),
@@ -713,9 +709,8 @@ burrow_means <- burrows %>% group_by(Species) %>%
             enter.area = mean(Entrance_Area, na.rm =T),
             enter.area.sd = sd(Entrance_Area, na.rm =T))
 
-
-
-lssp %>% group_by(Burrow) %>%
+# Summarise the burrow volumes
+ATPU_LSSP %>% group_by(Species, Burrow) %>%
   summarise(volume = min(volume)) %>%
   summarise(vol = mean(volume, na.rm =T),
             vol.sd = sd(volume, na.rm =T))
@@ -732,19 +727,20 @@ mean_puffin %>% group_by(Species) %>%
   summarise(mean = mean(var),
             sd = sd(var))
 
-# The mean burrow temperatures
-ATPU_LSSP %>% 
-  filter(!Burrow %in% c(1, 2, 3, 9, 15, 21, 27, 29)) %>%
-  group_by(Species, Location) %>%
-  summarise(mean = mean(temp),
-            sd = sd(temp),
-            max = max(temp),
-            min = min(temp))
+# The mean burrow temperatures 
+means<- ATPU_LSSP %>% 
+  group_by(Species) %>%
+  summarise(mean = mean(Inside),
+            sd = sd(Inside),
+            max = max(Inside),
+            min = min(Inside),
+            sd_out = sd(Outside, na.rm = T))
 
 
 # Summarise the weather data
-weather %>% group_by(Station) %>%
+weather %>% group_by(WeatherStation) %>%
   summarise(sd = sd(Temperature))
+
 
 # Summarise the buffering
 extreme %>%
@@ -781,7 +777,7 @@ extreme.summary <- extreme %>%
 26.6 - 15.7 # Hot extreme = 10.9 degC different from the mean burrow temp
 
 
-model_df_short %>%
+ATPU_LSSP %>%
   group_by(Species) %>%
   summarise(mean.temp = mean(Temperature, na.rm = T))
 
@@ -797,7 +793,7 @@ ggplot(extreme, aes(x = Extreme, y = Temperature)) +
   theme(legend.position = "none")+
   facet_wrap(~Species, scales = "free_y")+
   geom_hline(yintercept = 16.6, linetype = "dashed")+
-  geom_hline(yintercept = 15.7, linetype = "dashed")+
+  geom_hline(yintercept = 15.8, linetype = "dashed")+
   theme(strip.text = element_text(size = 16, color = "white", face = "bold"), 
         strip.background = element_rect(fill="black"))
 
@@ -807,7 +803,7 @@ ggplot(extreme, aes(x = Extreme, y = Temperature)) +
 
 
 ##______________________________________________________________
-## X. Change Point Analysis
+## 10. Change Point Analysis
 ##______________________________________________________________
 
 Run a change point analysis with package `changepoint` which finds changes in mean/variance of the internal burrow temperature to identify whether there was a significant change when the extreme seasonal events hit. 
@@ -815,13 +811,6 @@ Run a change point analysis with package `changepoint` which finds changes in me
 ```{r}
 
 library(changepoint)
-
-# Filter burrows that can't be used for the analysis
-ATPU_LSSP <- ATPU_LSSP %>% filter(!Burrow %in% c(1, 2, 3, 9, 15, 21, 27, 29))
-
-# Filter the data
-puffin <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin")
-petrel <- filter(ATPU_LSSP, Location == "Inside" & Species == "Leach's storm-petrel")
 
 # Atlantic puffin burrows
 # Here we will identify changepoints in the internal puffin burrow data based on
@@ -835,16 +824,16 @@ burrow = cpt1 = cpt2 = numeric()
 
 # Run the loop
 # Identify the individual puffin burrows (n = 24)
-for(i in unique(puffin$Burrow)){
+for(i in unique(atpu$Burrow)){
   
 # Filter the data to select 
-x <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin" & Burrow == i) 
+x <- filter(atpu, Burrow == i) 
 
 # Identify the change points
 # For some reason it doesn't allow the two to be pasted under one another
 # So here we just make two columns and will join them later
-cpt1[i] <- cpts(cpt.meanvar(x$temp, method = "BinSeg", Q=2))[1]
-cpt2[i] <- cpts(cpt.meanvar(x$temp, method = "BinSeg", Q=2))[2]
+cpt1[i] <- cpts(cpt.meanvar(x$Inside, method = "BinSeg", Q=2))[1]
+cpt2[i] <- cpts(cpt.meanvar(x$Inside, method = "BinSeg", Q=2))[2]
 
 # Assign the burrow number
 burrow[i] <- i
@@ -869,11 +858,11 @@ puffincpt$Date <- x$Date[puffincpt$cpt]
 # 04/08/2021 - 08/08/2021 - heat extreme 1 range
 # 14/08/2021 - heat extreme 2 beginning
 
-# Heat extreme 1 = 20/23 burrows 
+# Heat extreme 1 = 19/23 burrows (83%)  
 cptsummary <- puffincpt %>% filter(Date >= "2021-08-04") %>% 
   filter(Date <= "2021-08-08") %>% distinct(burrow, .keep_all = TRUE)
 
-# Heat extreme 2 = 1/23 burrows 
+# Heat extreme 2 = 1/23 burrows (4%)
 cptsummary <- puffincpt %>% filter(Date >= "2021-08-14") %>% 
   distinct(burrow, .keep_all = TRUE)
 
@@ -887,16 +876,15 @@ cptsummary <- puffincpt %>% filter(Date >= "2021-08-14") %>%
 burrow = cpt1 = cpt2 = cpt3 = numeric()
 
 # Run the loop
-for(i in unique(petrel$Burrow)){
+for(i in unique(lssp$Burrow)){
   
 # Filter the data to select 
-x <- filter(ATPU_LSSP, Location == "Inside" & 
-              Species == "Leach's storm-petrel" & Burrow == i) 
+x <- filter(lssp, Burrow == i) 
 
 # Identify the change points
-cpt1[i] <- cpts(cpt.var(x$temp, method = "BinSeg", Q=3))[1]
-cpt2[i] <- cpts(cpt.var(x$temp, method = "BinSeg", Q=3))[2]
-cpt3[i] <- cpts(cpt.var(x$temp, method = "BinSeg", Q=3))[3]
+cpt1[i] <- cpts(cpt.var(x$Inside, method = "BinSeg", Q=3))[1]
+cpt2[i] <- cpts(cpt.var(x$Inside, method = "BinSeg", Q=3))[2]
+cpt3[i] <- cpts(cpt.var(x$Inside, method = "BinSeg", Q=3))[3]
 
 # Assign burrow number
 burrow[i] <- i
@@ -920,15 +908,15 @@ petrelcpt$Date <- x$Date[petrelcpt$cpt]
 # 11/09/2021 - Hurricane Larry
 # 20/09/2021 - 21/09/2021 - Cyclone Odette range
 
-# Heat extreme 2 = 20/30 burrows
+# Heat extreme 2 = 20/30 burrows (67%)
 cptsummary <- petrelcpt %>% filter(Date >= "2021-08-14") %>% 
   filter(Date <= "2021-08-19") %>% distinct(burrow, .keep_all = TRUE)
 
-# Larry = 2/30
+# Larry = 2/30 (7%)
 cptsummary <- petrelcpt %>% filter(Date == "2021-09-11") %>% 
   distinct(burrow, .keep_all = TRUE)
 
-# Odette = 26/30 burrows 
+# Odette = 25/30 burrows (83%)
 cptsummary <- petrelcpt %>% filter(Date >= "2021-09-20") %>% 
   distinct(burrow, .keep_all = TRUE)
 
