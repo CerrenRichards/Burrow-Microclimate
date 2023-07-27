@@ -474,7 +474,6 @@ The following plot has been edited further to add the locations of the extreme e
 ```{r}
 
 # Using the data from the open plot weather station to create the tile plot
-
 ggplot(weather2_open, aes(x = Date, y = Time, fill = Temperature)) +
   theme_bw(base_size = 15)+
   theme(panel.grid.major = element_blank(), # remove the major lines
@@ -482,9 +481,15 @@ ggplot(weather2_open, aes(x = Date, y = Time, fill = Temperature)) +
   geom_tile(colour = "white", size = 0.15)+
   scale_fill_distiller(palette = "RdYlBu", direction = -1)+
   ylab("Time of Day (h)")+ theme(axis.title.y = element_text(vjust = 3)) +
-  theme(legend.position="bottom")+
-  guides(fill = guide_colourbar(barwidth = 10, barheight = 0.5))
+  theme(legend.position="right")+
+  guides(fill = guide_colourbar(barwidth = 0.5, barheight = 10))+
+  theme(axis.title.x = element_blank())+
+  labs(fill = "")
 
+
+# Save
+ggsave("Fig 2.pdf", 
+       width = 250, height = 80, unit = "mm")
 
 ```
 
@@ -556,7 +561,7 @@ ggplot()+
   geom_hline(data = meanline, aes(yintercept = mean), linetype = "dashed")
 
 # Save plot
-ggsave("maxminmean.png", 
+ggsave("Fig 3.pdf", 
        width = 270, height = 170, unit = "mm")
 
 ```
@@ -606,7 +611,7 @@ ggplot(data = maxmin_season, aes(x = Time, y = Mean, group = Location))+
 
 
 # Save plot
-ggsave("avg_temp_plot_legend.png", 
+ggsave("Fig 4.pdf", 
        width = 170, height = 100, unit = "mm")
 
 
@@ -670,8 +675,7 @@ library(patchwork)
 (tempall | extremeplot) + plot_layout(widths=c(2,1))
 
 # save the plot
-ggsave("stacked_buffer_weather.png", 
-       dpi = 600, 
+ggsave("Fig 5.pdf", 
        width = 350, height = 200, unit = "mm")
 
 
