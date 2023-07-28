@@ -15,40 +15,30 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Code Contents
 ##______________________________________________________________
 
-1. Format the PUFFIN temperature data
-    * Combine all the temperature .csv files
-    * Set up the date and time correctly
-    * Match the logger numbers to the data
+1. Format the metadata
 
-2. Format the PETREL temperature data
-    * Combine all the temperature .csv files
-    * Set up the date and time correctly
+2. Format the weather data
 
-3. Join the formatted puffin and petrel data
-    * Join the burrow features to the dataframe of temperatures
+3. Format the PUFFIN temperature data
 
-4. Format the weather data
-    * Join the weather data to the burrow temperature data
+4. Format the PETREL temperature data
+
+5. Join the formatted puffin and petrel data
+
+6. Calculate the burrow temperature buffering
+
+7. Filtering extreme temperatures
     
-5. Calculate the burrow temperature buffering
-
-6. Modelling
-    * MODEL - Predict drivers of burrow buffering capacity
-    * MODEL - Predict drivers of burrow microclimate
-    * MODEL - Overperforming burrows
-    
-7. Plotting
+8. Plotting
     * Fig 2 - Tile plot of seasonal temperature
     * Fig 3 - Violin plot of max, min, mean burrow temperature
     * Fig 4 - Hour of day mean temperature plot
     * Fig 5 - Buffering temperature plot
-    * Visualising other data
+    * Visualising the 3D interaction between wind and temperature
     
-X. Summary Information
-    * Burrow Features
-    * Calculate the circular mean and SD for burrow orientation
+9. Summary Information
 
-X. Change Point Analysis
+10. Change Point Analysis
 
 
 ##______________________________________________________________
@@ -382,6 +372,11 @@ ATPU_LSSP$julian <- as.numeric(ATPU_LSSP$julian)
 lssp <- filter(ATPU_LSSP, Species == "Leach's storm-petrel")
 atpu <- filter(ATPU_LSSP, Species == "Atlantic puffin")
 
+
+# save files
+write.csv(lssp, "lssp.csv")
+write.csv(atpu, "atpu.csv")
+
 # set burrow as factor
 lssp$Burrow <- factor(lssp$Burrow)
 atpu$Burrow <- factor(atpu$Burrow)
@@ -682,6 +677,26 @@ ggsave("Fig 5.pdf",
 ```
 
 
+## Visualising the 3D interaction between wind and temperature
+
+```{r}
+library(plotly)
+
+# Petrel
+plot_ly(lssp, x = ~Temperature, y = ~Wind.Speed, z = ~Inside,
+               marker = list(color = ~Inside, 
+                             colorscale = c('#FFE1A1', '#683531'),
+                             showscale = TRUE))
+
+
+# Puffin
+atpu.wind <- atpu %>% filter(Wind.Speed < 30)
+
+plot_ly(atpu.wind, x = ~Temperature, y = ~Wind.Speed, z = ~Inside,
+               marker = list(color = ~Inside, 
+                             colorscale = c('#FFE1A1', '#683531'),
+                             showscale = TRUE))
+```
 
 
 
@@ -691,11 +706,6 @@ ggsave("Fig 5.pdf",
 ##______________________________________________________________
 ## 9. Summary Information
 ##______________________________________________________________
-
-WEATHER
-- match the weather data (30 mins) to the burrow temps (15 minutes) or the other way around?
-
-- predict a good burrow?
 
 
 ```{r}
