@@ -821,319 +821,53 @@ ggplot(extreme, aes(x = Extreme, y = Temperature)) +
 ## 10. Change Point Analysis
 ##______________________________________________________________
 
-Run a change point analysis with package `changepoint` which finds changes in mean/variance of the internal burrow temperature to identify whether there was a significant change when the extreme seasonal events hit. 
+Run a change point analysis with package `changepoint` which finds changes in mean of the internal burrow temperature to identify whether there was a significant change when the extreme seasonal events hit. 
 
-```{r}
-
-library(changepoint)
-
-# Atlantic puffin burrows
-# Here we will identify changepoints in the internal puffin burrow data based on
-# the changes in the mean and variance of each burrow
-
-# Create empty spaces for results to be pasted
-burrow = cpt1 = cpt2 = numeric()
-
-# We're taking the longer route around here in our loop because
-# I couldn't work out the shorter way...
-
-# Run the loop
-# Identify the individual puffin burrows (n = 24)
-for(i in unique(atpu$Burrow)){
-  
-# Filter the data to select 
-x <- filter(atpu, Burrow == i) 
-
-# Identify the change points
-# For some reason it doesn't allow the two to be pasted under one another
-# So here we just make two columns and will join them later
-cpt1[i] <- cpts(cpt.meanvar(x$Inside, method = "BinSeg", Q=2))[1]
-cpt2[i] <- cpts(cpt.meanvar(x$Inside, method = "BinSeg", Q=2))[2]
-
-# Assign the burrow number
-burrow[i] <- i
-}
-
-# Create the dataframe containing all the information
-puffincpt <- data.frame(burrow, cpt1, cpt2) %>% arrange(cpt1)
-
-# Delete the NA rows
-# I think the function is assigning the changepoints to the rows based on the burrow numbers
-# So making 43 rows because the max burrow number is 43
-# We will just remove the extra NA rows
-puffincpt <- puffincpt %>% drop_na()
-
-# Gather the changepoint data
-puffincpt <- puffincpt %>% gather(order, cpt, cpt1:cpt2)
-
-# Find the dates
-puffincpt$Date <- x$Date[puffincpt$cpt]
-
-# Identify how many of the burrows fall within the range of the heat extremes
-# 04/08/2021 - 08/08/2021 - heat extreme 1 range
-# 14/08/2021 - heat extreme 2 beginning
-
-# Heat extreme 1 = 19/23 burrows (83%)  
-cptsummary <- puffincpt %>% filter(Date >= "2021-08-04") %>% 
-  filter(Date <= "2021-08-08") %>% distinct(burrow, .keep_all = TRUE)
-
-# Heat extreme 2 = 1/23 burrows (4%)
-cptsummary <- puffincpt %>% filter(Date >= "2021-08-14") %>% 
-  distinct(burrow, .keep_all = TRUE)
-
-
-
-# PETREL
-# Run just based on variance rather than mean+var because it identifies 
-# the changepoints better for the petrel data
-
-# Create empty spaces for results to be pasted
-burrow = cpt1 = cpt2 = cpt3 = numeric()
-
-# Run the loop
-for(i in unique(lssp$Burrow)){
-  
-# Filter the data to select 
-x <- filter(lssp, Burrow == i) 
-
-# Identify the change points
-cpt1[i] <- cpts(cpt.var(x$Inside, method = "BinSeg", Q=3))[1]
-cpt2[i] <- cpts(cpt.var(x$Inside, method = "BinSeg", Q=3))[2]
-cpt3[i] <- cpts(cpt.var(x$Inside, method = "BinSeg", Q=3))[3]
-
-# Assign burrow number
-burrow[i] <- i
-}
-
-# Create the dataframe containing all the information
-petrelcpt <- data.frame(burrow, cpt1, cpt2, cpt3) %>% arrange(cpt1)
-
-# Delete the NA rows
-petrelcpt <- petrelcpt %>% drop_na()
-
-# Gather the changepoint data
-petrelcpt <- petrelcpt %>% gather(order, cpt, cpt1:cpt3)
-
-# Find the dates
-petrelcpt$Date <- x$Date[petrelcpt$cpt]
-
-
-# Identify how many of the burrows fall within the range of the heat extremes
-# 14/08/2021 - 19/08/2021 - heat extreme 2 range
-# 11/09/2021 - Hurricane Larry
-# 20/09/2021 - 21/09/2021 - Cyclone Odette range
-
-# Heat extreme 2 = 20/30 burrows (67%)
-cptsummary <- petrelcpt %>% filter(Date >= "2021-08-14") %>% 
-  filter(Date <= "2021-08-19") %>% distinct(burrow, .keep_all = TRUE)
-
-# Larry = 2/30 (7%)
-cptsummary <- petrelcpt %>% filter(Date == "2021-09-11") %>% 
-  distinct(burrow, .keep_all = TRUE)
-
-# Odette = 25/30 burrows (83%)
-cptsummary <- petrelcpt %>% filter(Date >= "2021-09-20") %>% 
-  distinct(burrow, .keep_all = TRUE)
-
-
-
-## Can use the code below to look at specific patterns within individual burrows
-# Just change the burrow number to look at specific burrows
-
-x <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin" & Burrow == "37")
-x1 <- cpt.meanvar(x$temp, method = "BinSeg", Q=2)
-plot(x1)
-print(x1)
-
-x <- filter(ATPU_LSSP, Location == "Inside" & Burrow == "81" & Species == "Leach's storm-petrel")
-x1 <- cpt.var(x$temp, method = "BinSeg", Q=3)
-plot(x1)
-print(x1)
-
-
-```
-
-
-
-```{r}
-
-library(changepoint)
-
-# Atlantic puffin burrows
-# Here we will identify changepoints in the internal puffin burrow data based on
-# the changes in the mean and variance of each burrow
-
-# Create empty spaces for results to be pasted
-burrow = cpt1 = cpt2 = numeric()
-
-# We're taking the longer route around here in our loop because
-# I couldn't work out the shorter way...
-
-
-# Run the loop
-# Identify the individual puffin burrows (n = 24)
-for(i in unique(atpu$Burrow)){
-  
-# Filter the data to select 
-x <- filter(atpu, Burrow == i) 
-
-# Identify the change points
-# For some reason it doesn't allow the two to be pasted under one another
-# So here we just make two columns and will join them later
-cpt1[i] <- cpts(cpt.mean(x$Inside, method = "BinSeg", Q=2))[1]
-cpt2[i] <- cpts(cpt.mean(x$Inside, method = "BinSeg", Q=2))[2]
-
-# Assign the burrow number
-burrow[i] <- i
-}
-
-# Create the dataframe containing all the information
-puffincpt <- data.frame(burrow, cpt1, cpt2) %>% arrange(cpt1)
-
-# Delete the NA rows
-# I think the function is assigning the changepoints to the rows based on the burrow numbers
-# So making 43 rows because the max burrow number is 43
-# We will just remove the extra NA rows
-puffincpt <- puffincpt %>% drop_na()
-
-# Gather the changepoint data
-puffincpt <- puffincpt %>% gather(order, cpt, cpt1:cpt2)
-
-# Find the dates
-puffincpt$Date <- x$Date[puffincpt$cpt]
-
-# Identify how many of the burrows fall within the range of the heat extremes
-# 04/08/2021 - 08/08/2021 - heat extreme 1 range
-# 14/08/2021 - heat extreme 2 beginning
-
-# Heat extreme 1 = 19/23 burrows (83%)  
-cptsummary <- puffincpt %>% filter(Date >= "2021-08-04") %>% 
-  filter(Date <= "2021-08-08") %>% distinct(burrow, .keep_all = TRUE)
-
-# Heat extreme 2 = 1/23 burrows (4%)
-cptsummary <- puffincpt %>% filter(Date >= "2021-08-14") %>% 
-  distinct(burrow, .keep_all = TRUE)
-
-
-
-# PETREL
-# Run just based on variance rather than mean+var because it identifies 
-# the changepoints better for the petrel data
-
-# Create empty spaces for results to be pasted
-burrow = cpt1 = cpt2 = cpt3 = numeric()
-
-# Run the loop
-for(i in unique(lssp$Burrow)){
-  
-# Filter the data to select 
-x <- filter(lssp, Burrow == i) 
-
-# Identify the change points
-cpt1[i] <- cpts(cpt.mean(x$Inside, method = "BinSeg", Q=3))[1]
-cpt2[i] <- cpts(cpt.mean(x$Inside, method = "BinSeg", Q=3))[2]
-cpt3[i] <- cpts(cpt.mean(x$Inside, method = "BinSeg", Q=3))[3]
-
-# Assign burrow number
-burrow[i] <- i
-}
-
-# Create the dataframe containing all the information
-petrelcpt <- data.frame(burrow, cpt1, cpt2, cpt3) %>% arrange(cpt1)
-
-# Delete the NA rows
-petrelcpt <- petrelcpt %>% drop_na()
-
-# Gather the changepoint data
-petrelcpt <- petrelcpt %>% gather(order, cpt, cpt1:cpt3)
-
-# Find the dates
-petrelcpt$Date <- x$Date[petrelcpt$cpt]
-
-
-# Identify how many of the burrows fall within the range of the heat extremes
-# 14/08/2021 - 19/08/2021 - heat extreme 2 range
-# 11/09/2021 - Hurricane Larry
-# 20/09/2021 - 21/09/2021 - Cyclone Odette range
-
-# Heat extreme 2 = 20/30 burrows (67%)
-cptsummary <- petrelcpt %>% filter(Date >= "2021-08-14") %>% 
-  filter(Date <= "2021-08-19") %>% distinct(burrow, .keep_all = TRUE)
-
-# Larry = 2/30 (7%)
-cptsummary <- petrelcpt %>% filter(Date == "2021-09-11") %>% 
-  distinct(burrow, .keep_all = TRUE)
-
-# Odette = 25/30 burrows (83%)
-cptsummary <- petrelcpt %>% filter(Date >= "2021-09-20") %>% 
-  distinct(burrow, .keep_all = TRUE)
-
-
-
-## Can use the code below to look at specific patterns within individual burrows
-# Just change the burrow number to look at specific burrows
-
-x <- filter(ATPU_LSSP, Location == "Inside" & Species == "Atlantic puffin" & Burrow == "37")
-x1 <- cpt.meanvar(x$temp, method = "BinSeg", Q=2)
-plot(x1)
-print(x1)
-
-x <- filter(ATPU_LSSP, Location == "Inside" & Burrow == "81" & Species == "Leach's storm-petrel")
-x1 <- cpt.var(x$temp, method = "BinSeg", Q=3)
-plot(x1)
-print(x1)
-
-
-```
-
-## Petrels
-
-```{r}
-#create an empty list
-mylist <- list() 
-
-
-# Create a loop to extract the change points for each burrow
-
-for(i in unique(lssp$Burrow)){
-  
-# Filter the data to select 
-x <- filter(lssp, Burrow == i) 
-
-# Identify the change points
-cpt <- cpts(cpt.mean(x$Inside, method = "PELT"))
-
-# Place them all in a list
-mylist[i] <- list(as.data.frame(list("Burrow" = x[1,"Burrow"],
-                         "Points" = cpt,
-                         "Date" = x$Date[cpt])))
-
-}
-
-## Reduce the lists down
-change <- Reduce(rbind, mylist) 
-
-# Identify how many of the burrows fall within the range of the heat extremes
-# 14/08/2021 - 19/08/2021 - heat extreme 2 range
-# 11/09/2021 - Hurricane Larry
-# 20/09/2021 - 21/09/2021 - Cyclone Odette range
-
-# Heat extreme 2 = 28/30 burrows (93%)
-cptsummary <- change %>%  filter(Date >= "2021-08-14") %>% 
-  filter(Date <= "2021-08-19") %>% distinct(Burrow, .keep_all = TRUE)
-
-# Larry = 6/30 (20%)
-cptsummary <- change %>% filter(Date == "2021-09-11") %>% 
-  distinct(Burrow, .keep_all = TRUE)
-
-# Odette = 26/30 burrows (87%)
-cptsummary <- change %>% filter(Date >= "2021-09-20") %>% 
-  distinct(Burrow, .keep_all = TRUE)
-
-```
 
 ## Puffins
 
+Use the  pruned exact linear time (PELT) method - "The PELT algorithm
+proposed by Killick et al. (2012a) is similar to that of the segment neighborhood algorithm
+in that it provides an exact segmentation. However, due to the construction of the PELT algorithm, it can be shown to be more computationally efficient. Changepoints are spread throughout the data rather than confined to one portion."
+
+Visualise the trend with a subset of the data. No penalties appear to identify too many changepoints. We will identify the appropriate amount of penalties with an elbow plot.
+
+Using this tutorial to determine the correct number of penalties:
+http://rstudio-pubs-static.s3.amazonaws.com/269908_838de132ef2a4d07b58d03ffa088c3ed.html
+
+```{r}
+library(changepoint)
+
+# Change value to check multiple burrows
+x <- filter(atpu, Burrow == "11")
+x1 <- cpt.mean(x$Inside, method = "PELT")
+plot(x1)
+
+
+# running through a sequence of different penalty parameters
+cptfn <- function(data, pen) {
+  ans <- cpt.mean(data, test.stat="Normal", method = "PELT", penalty = "Manual", pen.value = pen) 
+  length(cpts(ans)) +1
+}
+ 
+
+# run cptfn for the signal with a known change point
+pen.vals <- seq(0, 40,.2)
+
+# Apply through all of the penalties
+elbowplotData <- unlist(lapply(pen.vals, function(p) 
+                  cptfn(data = x$Inside, pen = p)))
+
+# Visualise the elbow plot
+plot(pen.vals,elbowplotData, 
+     xlab = "PELT penalty parameter",
+     ylab = " ",
+     main = " ")
+
+
+```
+
+Apply manual penalty of 40 across all burrows.
 
 ```{r}
 #create an empty list
@@ -1148,7 +882,7 @@ for(i in unique(atpu$Burrow)){
 x <- filter(atpu, Burrow == i) 
 
 # Identify the change points
-cpt <- cpts(cpt.mean(x$Inside, method = "PELT"))
+cpt <- cpts(cpt.mean(x$Inside, method = "PELT", penalty = "Manual", pen.value = "40"))
 
 # Place them all in a list
 mylist[i] <- list(as.data.frame(list("Burrow" = x[1,"Burrow"],
@@ -1173,18 +907,83 @@ cptsummary <- change %>% filter(Date >= "2021-08-14") %>%
   distinct(Burrow, .keep_all = TRUE)
 
 
-## Can use the code below to look at specific patterns within individual burrows
-# Just change the burrow number to look at specific burrows
+```
 
+## Petrels
 
-x1 <- cpt.meanvar(x$Inside, method = "PELT")
+```{r}
+# Change value to check multiple burrows
+x <- filter(lssp, Burrow == "130")
+x1 <- cpt.mean(x$Inside, method = "PELT")
 plot(x1)
-print(x1)
 
-x <- filter(ATPU_LSSP, Location == "Inside" & Burrow == "81" & Species == "Leach's storm-petrel")
-x1 <- cpt.var(x$temp, method = "BinSeg", Q=3)
-plot(x1)
-print(x1)
+
+# running through a sequence of different penalty parameters
+cptfn <- function(data, pen) {
+  ans <- cpt.mean(data, test.stat="Normal", method = "PELT", penalty = "Manual", pen.value = pen) 
+  length(cpts(ans)) +1
+}
+ 
+
+# run cptfn for the signal with a known change point
+pen.vals <- seq(0, 40,.2)
+
+# Apply through all of the penalties
+elbowplotData <- unlist(lapply(pen.vals, function(p) 
+                  cptfn(data = x$Inside, pen = p)))
+
+# Visualise the elbow plot
+plot(pen.vals,elbowplotData, 
+     xlab = "PELT penalty parameter",
+     ylab = " ",
+     main = " ")
+
+
+```
+
+Apply manual penalty of 15 across all burrows.
+
+```{r}
+#create an empty list
+mylist <- list() 
+
+
+# Create a loop to extract the change points for each burrow
+
+for(i in unique(lssp$Burrow)){
+  
+# Filter the data to select 
+x <- filter(lssp, Burrow == i) 
+
+# Identify the change points
+cpt <- cpts(cpt.mean(x$Inside, method = "PELT",  penalty = "Manual", pen.value = "15"))
+
+# Place them all in a list
+mylist[i] <- list(as.data.frame(list("Burrow" = x[1,"Burrow"],
+                         "Points" = cpt,
+                         "Date" = x$Date[cpt])))
+
+}
+
+## Reduce the lists down
+change <- Reduce(rbind, mylist) 
+
+# Identify how many of the burrows fall within the range of the heat extremes
+# 14/08/2021 - 19/08/2021 - heat extreme 2 range
+# 11/09/2021 - Hurricane Larry
+# 20/09/2021 - 21/09/2021 - Cyclone Odette range
+
+# Heat extreme 2 = 29/30 burrows (97%)
+cptsummary <- change %>%  filter(Date >= "2021-08-14") %>% 
+  filter(Date <= "2021-08-19") %>% distinct(Burrow, .keep_all = TRUE)
+
+# Larry = 5/30 (17%)
+cptsummary <- change %>% filter(Date == "2021-09-11") %>% 
+  distinct(Burrow, .keep_all = TRUE)
+
+# Odette = 27/30 burrows (90%)
+cptsummary <- change %>% filter(Date >= "2021-09-20") %>% 
+  distinct(Burrow, .keep_all = TRUE)
 
 ```
 
