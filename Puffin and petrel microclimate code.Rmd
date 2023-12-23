@@ -704,32 +704,10 @@ plot_ly(atpu.wind, x = ~Temperature, y = ~Wind.Speed, z = ~Inside,
 Code extracted from https://github.com/smcollins323/LESP-Chick-Fledging
 
 ```{r}
-library(rgdal)
-library(legendMap)
-require(gridExtra)
-require(ggplot2)
-require(raster)
-library(maps)
-library(ggforce)
-require(grid)
-library(tidyverse)
-library(patchwork)
-list.files()
 
-#load and format data
-
+# Load Island polygons
 Gull <- read.csv("Gull_Island_Polygon.csv")
 Forest <- read.csv("Gull_Island_Forest_Polygon.csv")
-
-plot1 <- as.data.frame(cbind(47.2586, -52.7759))
-plot2 <- as.data.frame(cbind(47.2593, -52.7765))
-plot3 <- as.data.frame(cbind(47.26, -52.777))
-plot4 <- as.data.frame(cbind(47.2606, -52.777))
-plot5 <- as.data.frame(cbind(47.2606, -52.776))
-plot6 <- as.data.frame(cbind(47.2604, -52.7751))
-
-open <- c(47.2587861, -52.7764417)
-forest <- c(47.2600556, -52.7767111)
 
 #Create the map
 ggplot() +
@@ -739,20 +717,17 @@ ggplot() +
                colour = "black", fill = "lightgrey", linewidth = 0.05) +
   geom_polygon(data = Forest, aes(x = long, y = lat), 
                colour = "darkgrey", fill = "darkgrey")+
-  geom_point(aes(x=-52.7767111, y=47.2600556), colour="dark green")+ # forest weather station
-  geom_point(aes(x=-52.7764417, y=47.2587861), colour="light green")+ # forest weather station
+  geom_point(aes(x=-52.7767111, y=47.2600556), shape=8, size = 3)+ # forest weather station
+  geom_point(aes(x=-52.7764417, y=47.2587861), shape=8, size = 3)+ # open weather station
+  geom_point(aes(x=-52.7765700, y=47.2580000), shape=19, size = 3)+ # Puffin slope
+  geom_point(aes(x=-52.7761200, y=47.2585300), shape=17, size = 3)+ # Open plot
+  geom_point(aes(x=-52.7764100, y=47.2600900), shape=17, size = 3)+ # Forest plot
+  geom_point(aes(x=-52.7769600, y=47.2602800), shape=17, size = 3)+ # Near Forest plot
   plottheme
+  
+  #scale_bar(lon = -52.7745, lat = 47.2545, distance_lon = 0.2, distance_lat = 0.1, 
+  #distance_legend = 0.15, dist_unit = "km", orientation = F, legend_size = 3)
 
-
-  theme(panel.background = element_rect(fill = 'white', colour = 'black'), axis.text = element_text(colour = "black", size = 6))
-  scale_bar(lon = -52.7745, lat = 47.2545, distance_lon = 0.2, distance_lat = 0.1, distance_legend = 0.15, dist_unit = "km", orientation = F, legend_size = 3)
-
-
-
-####Figure 1####
-jpeg(filename = "figures/FigureS1_map.jpeg", units = "mm", width = 180, height = 130, res = 300)
-p2 + p1 + plot_annotation(tag_levels = 'A')
-dev.off()
 ```
 
 
