@@ -730,6 +730,43 @@ ggplot() +
 
 ```
 
+## Thermoneutral zones
+Data: Ricklefs et al. (1986)
+DAILY ENERGY EXPENDITURE BY ADULT LEACH'S STORM-PETRELS DURING THE NESTING CYCLE
+Physiol. Zool. 59(6):649-660
+
+Ellis & Gabrielsen (2002) Energetics of Free-Ranging Seabirds
+
+```{r}
+## Storm-petrels
+## Read data from Ricklefs et al. (1986)
+LESP_TNZ <- read.csv("LESP_TNZ.csv")
+
+# Create plot
+ggplot(data = LESP_TNZ)+
+  annotate("rect",xmin=14,xmax=26,ymin=-Inf,ymax=Inf, alpha=0.1, fill="black")+
+  #geom_vline(xintercept=14,linetype="dashed",col="blue", alpha=0.5) +
+  #geom_vline(xintercept=26,linetype="dashed",col="orange", alpha=0.5) +
+  geom_point(aes(x = Temperature, y = Value, colour = Response, shape = Response))+
+  geom_line(aes(x = Temperature, y = Value, colour = Response))+
+  plottheme+ theme(legend.position= c( 0.2, 0.85))+
+  labs(colour = " ", shape = " ")
+
+
+
+
+# Atlantic puffin
+
+# Equation from Ellis and Gabrielsen (2002)
+# LCT = 43.15 – 6.58 log mass – 0.26 latitude
+
+43.15 - (6.58*log10(490)) - (0.26*47.267) # = 13.15909
+
+
+
+```
+
+
 
 ##______________________________________________________________
 ## 9. Summary Information
