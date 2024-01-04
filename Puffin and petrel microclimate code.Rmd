@@ -566,12 +566,14 @@ ggsave("Fig 3.pdf",
 ```{r}
 ## Create dataframe of TNZ of the species
 sp.TNZ <- data.frame(Species = c("Atlantic puffin", "Atlantic puffin","Atlantic puffin",
-                               "Leach's storm-petrel","Leach's storm-petrel","Leach's storm-petrel"), 
+                               "Leach's storm-petrel","Leach's storm-petrel"), 
                    TNZ = c("UTC.hatchling","LCT.hatchling","LCT.adult",
-                           "UTC.adult","LCT.hatchling","LCT.adult"), 
+                           "LCT.hatchling","LCT.adult"), 
                    Temperature = c(35, 32, 13.16,
-                                   36, 32, 24))
+                                  32, 24))
 
+LCT <- data.frame(Species = c("Atlantic puffin","Leach's storm-petrel"), 
+                   LCT =  c(13.16,24))
 
 ATPU_LSSP <- read.csv("ATPU_LSSP.csv")
 
@@ -591,23 +593,74 @@ mean$Burrow2 <- factor(mean$Burrow2, levels=mean$Burrow2)
 TNZ <- left_join(ATPU_LSSP, mean)
   
 
+## Subset for puffins
+ATPU.TNZ <- TNZ %>% filter(Species == "Atlantic puffin")
 
-ggplot(data = TNZ, aes(x = Burrow2, y = Inside))+
+## Subset for petrels
+LESP.TNZ <- TNZ %>% filter(Species == "Leach's storm-petrel")
+
+
+## Puffin plot
+puffin.TNZ<-ggplot(data = ATPU.TNZ, aes(x = Burrow2, y = Inside))+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=13.16, ymax=35, alpha=0.2)+
   geom_violin()+
  stat_summary( fun.data = "mean_sdl",  fun.args = list(mult = 1), 
     geom = "pointrange", color = "black", size = 0.1)+
   xlab("Burrow") + ylab("Temperature (°C)")+
   plottheme+
+  geom_hline(yintercept = 13.15, colour = "#414487FF", linetype = "dashed", size = 1)+
+  geom_hline(yintercept = 32, colour = "#89B4C7", linetype = "dashed", size = 1)+
+  geom_hline(yintercept = 35, colour = "#FCA636FF", linetype = "dashed", size = 1)+
+  facet_wrap(~Species, scales = "free")+
+    theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
+        strip.text.y = element_text(size = 16, color = "white", face = "bold"),
+        strip.background = element_rect(fill="black"),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.x = element_blank())
+
+
+
+## Petrel plot
+petrel.TNZ<-ggplot(data = LESP.TNZ, aes(x = Burrow2, y = Inside))+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=24, ymax=Inf, alpha=0.2)+
+  geom_violin()+
+ stat_summary( fun.data = "mean_sdl",  fun.args = list(mult = 1), 
+    geom = "pointrange", color = "black", size = 0.1)+
+  xlab("Burrow") + ylab("Temperature (°C)")+
+  plottheme+
+  geom_hline(yintercept = 24, colour = "#414487FF", linetype = "dashed", size = 1)+
+  geom_hline(yintercept = 32, colour = "#89B4C7", linetype = "dashed", size = 1)+
+  facet_wrap(~Species)+
+    theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
+        strip.text.y = element_text(size = 16, color = "white", face = "bold"),
+        strip.background = element_rect(fill="black"),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())+
+  scale_y_continuous(limits = c(9.5, 36))
+
+
+library(patchwork)
+
+puffin.TNZ/petrel.TNZ
+
+## Puffin plot
+ggplot(data = TNZ, aes(x = Burrow2, y = Inside))+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=13, ymax=35, alpha=0.2)+
+  geom_violin()+
+ stat_summary( fun.data = "mean_sdl",  fun.args = list(mult = 1), 
+    geom = "pointrange", color = "black", size = 0.1)+
+  xlab("Burrow") + ylab("Temperature (°C)")+
+  plottheme+
+  geom_hline(data = sp.TNZ, aes(yintercept = Temperature, colour = TNZ), linetype = "dashed", size = 1)+
+  scale_colour_manual(values = c("#414487FF","#89B4C7","#E16462FF","#FCA636FF"))+
   facet_wrap(~Species, ncol = 1, scales = "free")+
     theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
         strip.text.y = element_text(size = 16, color = "white", face = "bold"),
         strip.background = element_rect(fill="black"),
         axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()
-        )+
-  geom_hline(data = sp.TNZ, aes(yintercept = Temperature, colour = TNZ), linetype = "dashed", size = 1)+
-  scale_colour_manual(values = c("#414487FF","#89B4C7","#E16462FF","#FCA636FF"))+
-  annotate(data = sp.TNZ,"rect",aes(xmin=-Inf,xmax=Inf, ymin=LTC.adult, ymax=LTC.hatchling), alpha=0.1, fill="black")
+        axis.ticks.x = element_blank())
+
 
 ```
 
