@@ -562,6 +562,56 @@ ggsave("Fig 3.pdf",
 
 ```
 
+## Thermoneutral zone
+```{r}
+## Create dataframe of TNZ of the species
+sp.TNZ <- data.frame(Species = c("Atlantic puffin", "Atlantic puffin","Atlantic puffin",
+                               "Leach's storm-petrel","Leach's storm-petrel","Leach's storm-petrel"), 
+                   TNZ = c("UTC.hatchling","LCT.hatchling","LCT.adult",
+                           "UTC.adult","LCT.hatchling","LCT.adult"), 
+                   Temperature = c(35, 32, 13.16,
+                                   36, 32, 24))
+
+
+ATPU_LSSP <- read.csv("ATPU_LSSP.csv")
+
+
+mean <-  ATPU_LSSP %>%group_by(Species, Burrow) %>% 
+              summarise(mean = mean(Inside)) %>%
+              arrange(desc(mean))
+  
+# Create a new column of burrow names because there are issues with the ordering 
+# when creating the plot because both the puffin and petrels share the same burrow numbers
+mean$Burrow2 <- paste(mean$Species, mean$Burrow)
+
+# Assign the burrows as factor to ensure correct ordering
+mean$Burrow2 <- factor(mean$Burrow2, levels=mean$Burrow2)  
+  
+# Join the two dataframes
+TNZ <- left_join(ATPU_LSSP, mean)
+  
+
+
+ggplot(data = TNZ, aes(x = Burrow2, y = Inside))+
+  geom_violin()+
+ stat_summary( fun.data = "mean_sdl",  fun.args = list(mult = 1), 
+    geom = "pointrange", color = "black", size = 0.1)+
+  xlab("Burrow") + ylab("Temperature (°C)")+
+  plottheme+
+  facet_wrap(~Species, ncol = 1, scales = "free")+
+    theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
+        strip.text.y = element_text(size = 16, color = "white", face = "bold"),
+        strip.background = element_rect(fill="black"),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()
+        )+
+  geom_hline(data = sp.TNZ, aes(yintercept = Temperature, colour = TNZ), linetype = "dashed", size = 1)+
+  scale_colour_manual(values = c("#414487FF","#89B4C7","#E16462FF","#FCA636FF"))+
+  annotate(data = sp.TNZ,"rect",aes(xmin=-Inf,xmax=Inf, ymin=LTC.adult, ymax=LTC.hatchling), alpha=0.1, fill="black")
+
+```
+
+
 
 
 ## Fig 4 - Hour of day mean temperature plot
