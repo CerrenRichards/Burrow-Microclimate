@@ -564,16 +564,7 @@ ggsave("Fig 3.pdf",
 
 ## Thermoneutral zone
 ```{r}
-## Create dataframe of TNZ of the species
-sp.TNZ <- data.frame(Species = c("Atlantic puffin", "Atlantic puffin","Atlantic puffin",
-                               "Leach's storm-petrel","Leach's storm-petrel"), 
-                   TNZ = c("UTC.hatchling","LCT.hatchling","LCT.adult",
-                           "LCT.hatchling","LCT.adult"), 
-                   Temperature = c(35, 32, 13.16,
-                                  32, 24))
 
-LCT <- data.frame(Species = c("Atlantic puffin","Leach's storm-petrel"), 
-                   LCT =  c(13.16,24))
 
 ATPU_LSSP <- read.csv("ATPU_LSSP.csv")
 
@@ -603,14 +594,15 @@ LESP.TNZ <- TNZ %>% filter(Species == "Leach's storm-petrel")
 ## Puffin plot
 puffin.TNZ<-ggplot(data = ATPU.TNZ, aes(x = Burrow2, y = Inside))+
     annotate("rect", xmin=-Inf, xmax=Inf, ymin=13.16, ymax=35, alpha=0.2)+
+   annotate("rect", xmin=-Inf, xmax=Inf, ymin=32, ymax=35, alpha=0.4)+
   geom_violin()+
  stat_summary( fun.data = "mean_sdl",  fun.args = list(mult = 1), 
     geom = "pointrange", color = "black", size = 0.1)+
   xlab("Burrow") + ylab("Temperature (°C)")+
   plottheme+
-  geom_hline(yintercept = 13.15, colour = "#414487FF", linetype = "dashed", size = 1)+
-  geom_hline(yintercept = 32, colour = "#89B4C7", linetype = "dashed", size = 1)+
-  geom_hline(yintercept = 35, colour = "#FCA636FF", linetype = "dashed", size = 1)+
+  geom_hline(yintercept = 13.15, colour = "#414487FF", linetype = "dashed", size = 1.3)+
+  geom_hline(yintercept = 32, colour = "#89B4C7", linetype = "dashed", size = 1.3)+
+  geom_hline(yintercept = 35, colour = "#FCA636FF", linetype = "dashed", size = 1.3)+
   facet_wrap(~Species, scales = "free")+
     theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
         strip.text.y = element_text(size = 16, color = "white", face = "bold"),
@@ -624,13 +616,14 @@ puffin.TNZ<-ggplot(data = ATPU.TNZ, aes(x = Burrow2, y = Inside))+
 ## Petrel plot
 petrel.TNZ<-ggplot(data = LESP.TNZ, aes(x = Burrow2, y = Inside))+
     annotate("rect", xmin=-Inf, xmax=Inf, ymin=24, ymax=Inf, alpha=0.2)+
+     annotate("rect", xmin=-Inf, xmax=Inf, ymin=32, ymax=Inf, alpha=0.4)+
   geom_violin()+
  stat_summary( fun.data = "mean_sdl",  fun.args = list(mult = 1), 
     geom = "pointrange", color = "black", size = 0.1)+
   xlab("Burrow") + ylab("Temperature (°C)")+
   plottheme+
-  geom_hline(yintercept = 24, colour = "#414487FF", linetype = "dashed", size = 1)+
-  geom_hline(yintercept = 32, colour = "#89B4C7", linetype = "dashed", size = 1)+
+  geom_hline(yintercept = 24, colour = "#414487FF", linetype = "dashed", size = 1.3)+
+  geom_hline(yintercept = 32, colour = "#89B4C7", linetype = "dashed", size = 1.3)+
   facet_wrap(~Species)+
     theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
         strip.text.y = element_text(size = 16, color = "white", face = "bold"),
@@ -644,22 +637,7 @@ library(patchwork)
 
 puffin.TNZ/petrel.TNZ
 
-## Puffin plot
-ggplot(data = TNZ, aes(x = Burrow2, y = Inside))+
-    annotate("rect", xmin=-Inf, xmax=Inf, ymin=13, ymax=35, alpha=0.2)+
-  geom_violin()+
- stat_summary( fun.data = "mean_sdl",  fun.args = list(mult = 1), 
-    geom = "pointrange", color = "black", size = 0.1)+
-  xlab("Burrow") + ylab("Temperature (°C)")+
-  plottheme+
-  geom_hline(data = sp.TNZ, aes(yintercept = Temperature, colour = TNZ), linetype = "dashed", size = 1)+
-  scale_colour_manual(values = c("#414487FF","#89B4C7","#E16462FF","#FCA636FF"))+
-  facet_wrap(~Species, ncol = 1, scales = "free")+
-    theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
-        strip.text.y = element_text(size = 16, color = "white", face = "bold"),
-        strip.background = element_rect(fill="black"),
-        axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())
+
 
 
 ```
@@ -866,6 +844,12 @@ ggplot(data = LESP_TNZ)+
 43.15 - (6.58*log10(490)) - (0.26*47.267) # = 13.15909
 
 
+# homeothermic puffin (~110g at 10 days old)
+43.15 - (6.58*log10(110)) - (0.26*47.267) # = 17.4
+
+
+# homeothermic petrel (~15g at 5 days old)
+43.15 - (6.58*log10(15)) - (0.26*47.267) # = 23.1
 
 ```
 
