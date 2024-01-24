@@ -74,6 +74,7 @@ metadata$Species[metadata$Species == "LSSP"] <- "Leach's storm-petrel"
 # specify the order of the colours
 metadata$Location <- factor(metadata$Location, levels=c("Outside", "Inside"))
 
+
 ```
 
 ##______________________________________________________________
@@ -396,13 +397,16 @@ atpu$Burrow <- factor(atpu$Burrow)
 quant_weather <- ATPU_LSSP %>%
   group_by(Species) %>%
   summarise(quantile1 = quantile(Temperature, c(.01), na.rm = T),
-            quantile99 = quantile(Temperature, c(.99), na.rm = T))
+            quantile99 = quantile(Temperature, c(.99), na.rm = T),
+            quantile1_logger = quantile(Outside, c(.01), na.rm = T),
+            quantile99_logger = quantile(Outside, c(.99), na.rm = T))
 
 
 ## Filter out the extreme temperatures (Leach's)
-## COLD
+## COLD WEATHER STATION
 extreme_cold_LSSP <- filter(ATPU_LSSP, Temperature <= 6.5 & Species == "Leach's storm-petrel")
 extreme_cold_LSSP$Extreme <- "Cold Extreme"
+extreme_cold_LSSP$Temp <- "Station"
 
 ## Mean and SD for weather station buffering
 mean(extreme_cold_LSSP$buffer_kestrel) # 7.40 deg C
@@ -412,9 +416,18 @@ sd(extreme_cold_LSSP$buffer_kestrel) #1.20
 mean(extreme_cold_LSSP$buffer_logger) # 6.85 deg C
 sd(extreme_cold_LSSP$buffer_logger) #1.33
 
+## COLD LOGGER
+extreme_cold_LSSP_logger <- filter(ATPU_LSSP, Outside <= 7.2 & Species == "Leach's storm-petrel")
+extreme_cold_LSSP_logger$Extreme <- "Cold Extreme"
+extreme_cold_LSSP_logger$Temp <- "Logger"
+
+
+
+
 ## HOT
 extreme_heat_LSSP <- filter(ATPU_LSSP, Temperature >= 25.7 & Species == "Leach's storm-petrel")
 extreme_heat_LSSP$Extreme <- "Heat Extreme"
+
 
 ## Mean and SD for weather station buffering
 mean(extreme_heat_LSSP$buffer_kestrel) #-9.45 deg C
@@ -426,9 +439,10 @@ sd(extreme_heat_LSSP$buffer_logger) #3.47
 
 
 ## Filter out the extreme temperatures (Puffin)
-## COLD
+## COLD STATION
 extreme_cold_ATPU <- filter(ATPU_LSSP, Temperature <= 10 & Species == "Atlantic puffin")
 extreme_cold_ATPU$Extreme <- "Cold Extreme"
+extreme_cold_ATPU$Temp <- "Station"
 
 ## Mean and SD for weather station buffering
 mean(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 8.049758 deg C
@@ -437,6 +451,11 @@ sd(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 1.534774
 ## Mean and SD for external burrow logger buffering
 mean(extreme_cold_ATPU$buffer_logger, na.rm = T) # 7.75 deg C
 sd(extreme_cold_ATPU$buffer_logger, na.rm = T) # 2.064
+
+## COLD STATION
+extreme_cold_ATPU_logger <- filter(ATPU_LSSP, Temperature <= 10 & Species == "Atlantic puffin")
+extreme_cold_ATPU_logger$Extreme <- "Cold Extreme"
+extreme_cold_ATPU_logger$Temp <- "Logger"
 
 ## HOT
 extreme_heat_ATPU <- filter(ATPU_LSSP, Temperature >= 25.6 & Species == "Atlantic puffin")
@@ -453,6 +472,11 @@ sd(extreme_heat_ATPU$buffer_logger, na.rm = T) # 5.61
 ## Join the dataframes
 extreme <- rbind(extreme_cold_LSSP, extreme_heat_LSSP, 
                  extreme_cold_ATPU, extreme_heat_ATPU)
+
+
+## Cold extremes
+cold_extreme <- rbind(extreme_cold_LSSP, extreme_cold_LSSP_logger, 
+                 extreme_cold_ATPU, extreme_cold_ATPU_logger)
 
 ```
 
@@ -693,6 +717,33 @@ prop_refuge <- ATPU_LSSP %>% group_by(Species, Burrow) %>%
             prop = (Yes/n)*100)
   
 
+prop_refuge <- prop_refuge[-5,]
+
+
+
+prop_refuge <- left_join(prop_refuge, burrows)
+## Calculate the elliptical cylinder volume of the burrow for the modelling
+prop_refuge$volume <- pi * (prop_refuge$Width/2) * (prop_refuge$Height/2) * prop_refuge$Depth
+
+
+
+
+
+ggplot(filter(prop_refuge, Species == "Leach's storm-petrel"), 
+       aes(x = Canopy, y = prop, colour = Temp))+
+  geom_point()+
+  stat_smooth(method = "gam", formula = y ~ s(x), size = 1)
+
+ggplot(filter(prop_refuge, Species == "Atlantic puffin"))+
+  geom_point(aes(x = volume, y = prop, colour = Temp))
+
+
+ggplot(prop_refuge2)+
+  geom_boxplot(aes(x = Species, y = prop, fill = Temp))
+
+
+
+
 
 ## Adult ATPU refuge
 
@@ -708,27 +759,45 @@ refuge_ad_ATPU <- ATPU_LSSP %>% filter(Species == "Atlantic puffin") %>% group_b
             Yes = sum(Refuge, na.rm = T),
             prop = (Yes/n)*100)
 
+refuge_ad_ATPU$Species <- "Atlantic puffin (adult)"
+
+prop_refuge2 <- rbind(prop_refuge, refuge_ad_ATPU)
 
 
-V5 = ifelse(V1 == 1 & V2 != 4, 1,0)
+## 95% Confindence intervals
+refuge_ad_ATPU <- ATPU_LSSP %>% filter(Species == "Atlantic puffin") %>% group_by(Burrow) %>% 
+  mutate(LCT = ifelse(Inside > 10.97, 1, 0),
+         Logger = ifelse(LCT == 0, ifelse(Inside > Outside, 1, 0), 1),
+         Station = ifelse(LCT == 0, ifelse(Inside > Temperature, 1, 0), 1)) %>%
+  select(Species, Burrow, Logger, Station) %>%
+  gather(Temp, Refuge, Logger:Station) %>% # gather data
+  group_by(Species, Burrow, Temp) %>%
+  summarise(n=n(),
+            Yes = sum(Refuge, na.rm = T),
+            prop = (Yes/n)*100)
 
 
-## ATPU adult LCT = 13.44
-no.TNZ <- ATPU_LSSP %>% filter(Species == "Atlantic puffin" & Inside < 13.44) ## 66 values
-(66/35673)*100 # 0.19% (<1% of the time) across four burrows
-
-no.TNZ<- no.TNZ %>% mutate(Logger = ifelse(Inside > Outside, 1, 0), ## Assign 1 if the burrow temperatures are greater than the outside loggers
-         Station = ifelse(Inside > Temperature, 1,0))
-
-
-## 95% CI = 15.92, 10.97
-no.TNZ <- ATPU_LSSP %>% filter(Species == "Atlantic puffin" & Inside < 10.97) ## 0 values
-no.TNZ <- ATPU_LSSP %>% filter(Species == "Atlantic puffin" & Inside < 15.92) ## 3775 values
-(3775/35673)*100 # 10.58% across 19 burrows
+refuge_ad_ATPU <- ATPU_LSSP %>% filter(Species == "Atlantic puffin") %>% group_by(Burrow) %>% 
+  mutate(LCT = ifelse(Inside > 15.93, 1, 0),
+         Logger = ifelse(LCT == 0, ifelse(Inside > Outside, 1, 0), 1),
+         Station = ifelse(LCT == 0, ifelse(Inside > Temperature, 1, 0), 1)) %>%
+  select(Species, Burrow, Logger, Station) %>%
+  gather(Temp, Refuge, Logger:Station) %>% # gather data
+  group_by(Species, Burrow, Temp) %>%
+  summarise(n=n(),
+            Yes = sum(Refuge, na.rm = T),
+            prop = (Yes/n)*100)
 
 
 
 
+## Cold extremes
+
+## Proportion of time in refuge
+## all 100%
+cold_extreme_refuge <- cold_extreme %>% group_by(Species, Burrow) %>% 
+  mutate(Logger = ifelse(Inside > Outside, 1, 0),
+         Station = ifelse(Inside > Temperature, 1,0)) 
 
 
 ```
