@@ -412,6 +412,13 @@ extreme_cold_LSSP$Temp <- "Station"
 mean(extreme_cold_LSSP$buffer_kestrel) # 7.40 deg C
 sd(extreme_cold_LSSP$buffer_kestrel) #1.20
 
+## Look at the mean range across burrows
+extreme_cold_LSSP %>% group_by(Burrow)%>% 
+  summarise(mean = mean(buffer_kestrel)) %>%
+              summarise(min = min(mean),
+                        max = max(mean))
+
+
 ## Mean and SD for external burrow logger buffering
 mean(extreme_cold_LSSP$buffer_logger) # 6.85 deg C
 sd(extreme_cold_LSSP$buffer_logger) #1.33
@@ -448,11 +455,18 @@ extreme_cold_ATPU$Temp <- "Station"
 mean(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 8.049758 deg C
 sd(extreme_cold_ATPU$buffer_kestrel, na.rm = T) # 1.534774
 
+## Look at the mean range across burrows
+extreme_cold_ATPU %>% group_by(Burrow)%>% 
+  summarise(mean = mean(buffer_kestrel)) %>%
+              summarise(min = min(mean),
+                        max = max(mean))
+
+
 ## Mean and SD for external burrow logger buffering
 mean(extreme_cold_ATPU$buffer_logger, na.rm = T) # 7.75 deg C
 sd(extreme_cold_ATPU$buffer_logger, na.rm = T) # 2.064
 
-## COLD STATION
+## COLD LOGGER
 extreme_cold_ATPU_logger <- filter(ATPU_LSSP, Temperature <= 10 & Species == "Atlantic puffin")
 extreme_cold_ATPU_logger$Extreme <- "Cold Extreme"
 extreme_cold_ATPU_logger$Temp <- "Logger"
@@ -477,6 +491,44 @@ extreme <- rbind(extreme_cold_LSSP, extreme_heat_LSSP,
 ## Cold extremes
 cold_extreme <- rbind(extreme_cold_LSSP, extreme_cold_LSSP_logger, 
                  extreme_cold_ATPU, extreme_cold_ATPU_logger)
+
+
+
+## 11/09/2021 - Hurricane Larry LESP
+## Buffering of LESP
+ATPU_LSSP %>% filter(Species == "Leach's storm-petrel" & Date == "2021-09-11") %>%
+              summarise(mean = mean(buffer_kestrel),
+                        sd = sd(buffer_kestrel))
+
+ATPU_LSSP %>% filter(Species == "Leach's storm-petrel" & Date == "2021-09-11") %>% filter(buffer_kestrel > 0) %>%
+              summarise(mean = mean(buffer_kestrel),
+                        sd = sd(buffer_kestrel))
+
+## Look at the mean range across burrows
+ATPU_LSSP %>% filter(Species == "Leach's storm-petrel" & Date == "2021-09-11") %>% filter(buffer_kestrel > 0) %>% group_by(Burrow)%>%
+              summarise(mean = mean(buffer_kestrel)) %>%
+              summarise(min = min(mean),
+                        max = max(mean))
+
+
+
+## COLD BUFFERING THROUGH THE WHOLE SEASON
+ATPU_LSSP %>% group_by(Species) %>% filter(buffer_kestrel > 0) %>%
+              summarise(mean = mean(buffer_kestrel),
+                        sd = sd(buffer_kestrel))
+
+
+## Look at the mean range across burrows
+ATPU_LSSP %>% group_by(Species) %>% filter(buffer_kestrel > 0) %>%
+              group_by(Species, Burrow)%>%
+              summarise(mean = mean(buffer_kestrel)) %>%
+              summarise(min = min(mean),
+                        max = max(mean))
+
+extreme_cold_ATPU %>% group_by(Burrow)%>% 
+  summarise(mean = mean(buffer_kestrel)) %>%
+              summarise(min = min(mean),
+                        max = max(mean))
 
 ```
 
@@ -680,6 +732,21 @@ ATPU_LSSP %>% filter(Species == "Atlantic puffin" & Inside > 32) ## No hatchling
 no.TNZ <- ATPU_LSSP %>% filter(Species == "Atlantic puffin" & Inside < 13.44) ## 66 values
 (66/35673)*100 # 0.19% (<1% of the time) across four burrows
 
+
+## Proportion of time outside LCT per burrow
+prop_refuge.atpu <- ATPU_LSSP %>% filter(Species == "Atlantic puffin") %>% 
+  mutate(Station = ifelse(Inside < 13.44, 1,0)) %>% ## Assign 1 if the burrow temperatures are greater than the weather station
+  select(Burrow,  Station) %>%
+  gather(Temp, Refuge, Station) %>% # gather data
+  group_by(Burrow, Temp) %>%
+  summarise(n=n(),
+            Yes = sum(Refuge, na.rm = T),
+            prop = (Yes/n)*100)
+
+mean(prop_refuge.atpu$prop)
+sd(prop_refuge.atpu$prop)
+
+
 ## 95% CI = 15.92, 10.97
 no.TNZ <- ATPU_LSSP %>% filter(Species == "Atlantic puffin" & Inside < 10.97) ## 0 values
 no.TNZ <- ATPU_LSSP %>% filter(Species == "Atlantic puffin" & Inside < 15.92) ## 3775 values
@@ -696,6 +763,18 @@ extreme_cold_ATPU %>% filter(Inside < 13.44) # 1 value
 1/414
 
 
+## Proportion of time outside LCT per burrow
+prop.extreme_cold_ATPU <- extreme_cold_ATPU %>% filter(Species == "Atlantic puffin") %>% 
+  mutate(Station = ifelse(Inside < 13.44, 1,0)) %>% ## Assign 1 if the burrow temperatures are greater than the weather station
+  select(Burrow,  Station) %>%
+  gather(Temp, Refuge, Station) %>% # gather data
+  group_by(Burrow, Temp) %>%
+  summarise(n=n(),
+            Yes = sum(Refuge, na.rm = T),
+            prop = (Yes/n)*100)
+
+mean(prop.extreme_cold_ATPU$prop)
+sd(prop.extreme_cold_ATPU$prop)
 
 ```
 
@@ -800,6 +879,11 @@ prop_refuge <- ATPU_LSSP %>% group_by(Species, Burrow) %>%
             prop = (Yes/n)*100)
   
 
+prop_refuge %>% filter(Temp == "Station") %>% group_by(Species) %>%
+   summarise(mean = mean(prop), sd = sd(prop))
+
+
+
 prop_refuge <- prop_refuge[-5,]
 
 
@@ -841,6 +925,10 @@ refuge_ad_ATPU <- ATPU_LSSP %>% filter(Species == "Atlantic puffin") %>% group_b
   summarise(n=n(),
             Yes = sum(Refuge, na.rm = T),
             prop = (Yes/n)*100)
+
+
+
+ 
 
 refuge_ad_ATPU$Species <- "Atlantic puffin (adult)"
 
@@ -886,13 +974,6 @@ cold_extreme_refuge <- cold_extreme %>% group_by(Species, Burrow) %>%
 
 
 ## 11/09/2021 - Hurricane Larry LESP
-
-## Buffering of LESP
-ATPU_LSSP %>% filter(Species == "Leach's storm-petrel" & Date == "2021-09-11") %>%
-              summarise(mean = mean(buffer_kestrel),
-                        sd = sd(buffer_kestrel))
-
-
 
 hurricane <- ATPU_LSSP %>% filter(Species == "Leach's storm-petrel"
                                     & Date == "2021-09-11") %>% 
