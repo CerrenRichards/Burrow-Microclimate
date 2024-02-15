@@ -691,6 +691,12 @@ no.TNZ <- ATPU_LSSP %>% filter(Species == "Atlantic puffin" & Inside < 15.92) ##
 ATPU_LSSP %>% filter(Species == "Leach's storm-petrel" & Inside > 26) ## No temperatures within TNZ
 
 
+## Adult ATPU Time outside cold extreme
+extreme_cold_ATPU %>% filter(Inside < 13.44) # 1 value
+1/414
+
+
+
 ```
 
 ## Determine proportion of time as a refuge
@@ -703,6 +709,83 @@ burrow temp > weather station
 
 plot(LESP.TNZ$Outside, LESP.TNZ$Temperature)
 plot(ATPU.TNZ$Outside, ATPU.TNZ$Temperature)
+
+
+# Logger buffer
+ATPU_LSSP$buffer_logger <- ATPU_LSSP$Inside - ATPU_LSSP$Outside
+
+# kestrel buffer
+ATPU_LSSP$buffer_kestrel <- ATPU_LSSP$Inside - ATPU_LSSP$Temperature
+
+## Calculate the elliptical cylinder volume of the burrow for the modelling
+ATPU_LSSP$volume <- pi * (ATPU_LSSP$Width/2) * (ATPU_LSSP$Height/2) * ATPU_LSSP$Depth
+
+
+
+## Calculate the amount a burrow buffers 
+
+logger <- ATPU_LSSP %>% group_by(Species, Burrow) %>% 
+  mutate(Logger = ifelse(Inside > Outside, 1, 0)) %>%
+  filter(Logger == 1) %>% group_by(Species, Burrow) %>% 
+  summarise(mean.logger.buff = mean(buffer_logger),
+            median.logger.buffer = median(buffer_logger))
+
+
+station <- ATPU_LSSP %>% group_by(Species, Burrow) %>% 
+  mutate(Station = ifelse(Inside > Temperature, 1,0)) %>%
+  filter(Station == 1) %>% group_by(Species, Burrow) %>% 
+  summarise(mean.station.buff = mean(buffer_kestrel),
+            median.station.buffer = median(buffer_kestrel))
+
+prop_refuge3 <- left_join(prop_refuge, logger) %>%
+               left_join(., station)
+
+
+
+ggplot(filter(prop_refuge3, Species == "Atlantic puffin"), 
+       aes(y = median.station.buffer, x = Depth))+
+  geom_point()
+
+
+ggplot(filter(prop_refuge3, Species == "Leach's storm-petrel"), 
+       aes(y = median.station.buffer, x = Canopy))+
+  geom_point()
+
+
+ggplot(filter(prop_refuge3, Species == "Leach's storm-petrel"), 
+       aes(y = median.logger.buffer, x = volume))+
+  geom_point()
+
+
+
+
+
+
+  stat_smooth(method = "gam", formula = y ~ s(x), size = 1)
+
+ggplot(filter(prop_refuge, Species == "Atlantic puffin"))+
+  geom_point(aes(x = volume, y = prop, colour = Temp))
+
+
+
+logger <- ATPU_LSSP %>% group_by(Species, Burrow) %>% 
+  mutate(Logger = ifelse(Inside > Outside, 1, 0)) %>%
+  filter(Logger == 1)
+
+station <- ATPU_LSSP %>% group_by(Species, Burrow) %>% 
+  mutate(Station = ifelse(Inside > Temperature, 1,0)) %>%
+  filter(Station == 1)
+
+
+ggplot(filter(station, Species == "Leach's storm-petrel"), 
+       aes(y = buffer_kestrel, x = Canopy))+
+  geom_point()
+
+
+ggplot(filter(logger, Species == "Leach's storm-petrel"), 
+       aes(y = buffer_logger, x = Canopy))+
+  geom_point()
+
 
 
 ## Proportion of time in refuge
@@ -800,6 +883,33 @@ cold_extreme_refuge <- cold_extreme %>% group_by(Species, Burrow) %>%
          Station = ifelse(Inside > Temperature, 1,0)) 
 
 
+
+
+## 11/09/2021 - Hurricane Larry LESP
+
+## Buffering of LESP
+ATPU_LSSP %>% filter(Species == "Leach's storm-petrel" & Date == "2021-09-11") %>%
+              summarise(mean = mean(buffer_kestrel),
+                        sd = sd(buffer_kestrel))
+
+
+
+hurricane <- ATPU_LSSP %>% filter(Species == "Leach's storm-petrel"
+                                    & Date == "2021-09-11") %>% 
+  group_by(Burrow) %>% 
+  mutate(LCT = ifelse(Inside > 26, 1, 0),
+        # Logger = ifelse(LCT == 0, ifelse(Inside > Outside, 1, 0), 1),
+         Station = ifelse(LCT == 0, ifelse(Inside > Temperature, 1, 0), 1)) %>%
+  select(Species, Burrow,  Station) %>%
+  gather(Temp, Refuge, Station) %>% # gather data
+  group_by(Species, Burrow, Temp) %>%
+  summarise(n=n(),
+            Yes = sum(Refuge, na.rm = T),
+            prop = (Yes/n)*100)
+
+
+mean(hurricane$prop)
+sd(hurricane$prop)
 ```
 
 
@@ -1076,6 +1186,7 @@ Lowther, P. E., A. W. Diamond, S. W. Kress, G. J. Robertson, K. Russell, D. N. N
 
 library(dplyr);library(tidyr)
 
+## BURROW FEATURES
 # Summarise the mean values for each of the burrow features
 burrow_means <- metadata %>% group_by(Species) %>%
   summarise(width = mean(Width, na.rm =T), 
@@ -1094,10 +1205,12 @@ ATPU_LSSP %>% group_by(Species, Burrow) %>%
             vol.sd = sd(volume, na.rm =T))
 
 
+## TEMPERATURES
+
 ## Calculate the mean variance between burrows
 mean_puffin <- ATPU_LSSP %>% 
   group_by(Burrow, Species) %>%
-  summarise(var = var(Inside))
+  summarise(var = var(Inside)) 
 
 
 # The mean variation between the burrows
@@ -1112,12 +1225,91 @@ means<- ATPU_LSSP %>%
             sd = sd(Inside),
             max = max(Inside),
             min = min(Inside),
-            sd_out = sd(Outside, na.rm = T))
+            sd_out = sd(Outside, na.rm = T),
+            max.out = max(Outside, na.rm = T),
+            min.out = min(Outside, na.rm = T),
+            mean.out = mean(Outside, na.rm = T),)
+
+
+ATPU_LSSP %>% filter(Burrow !=6)%>%
+  group_by(Species) %>% 
+  summarise(mean = mean(Outside),
+            sd = sd(Outside))
+
+## Summarise the daily max, min and mean for each burrow
+maxmin <- ATPU_LSSP %>% filter(Burrow !=6)%>%
+  group_by(Date, Burrow, Species) %>%
+  summarise(mean = mean(Inside),
+            max = max(Inside), 
+            min = min(Inside),
+            max.out = max(Outside, na.rm = T),
+            min.out = min(Outside, na.rm = T),           
+            mean.out = mean(Outside, na.rm = T))%>%
+  group_by(Burrow, Species) %>%
+  summarise(mean = mean(mean),
+            max = mean(max), 
+            min = mean(min),
+            max.out = mean(max.out, na.rm = T),
+            min.out = mean(min.out, na.rm = T),           
+            mean.out = mean(mean.out, na.rm = T))%>%
+  group_by(Species) %>%
+  summarise(mean = mean(mean),
+            max = mean(max), 
+            min = mean(min),
+            sd.max = sd(max.out),
+            sd.min =sd(min.out),
+            max.out =mean(max.out, na.rm = T),
+            min.out = mean(min.out, na.rm = T),           
+            mean.out = mean(mean.out, na.rm = T))
+  
+
+
+
+  group_by(Species, Burrow)%>%
+  summarise(mean = mean(`Daily Mean`),
+            min = mean(`Daily Min.`),
+            max = mean(`Daily Max.`)) %>%
+  group_by(Species)%>%
+  summarise(mean=mean(mean),
+            sd.min=sd(min),
+            sd.max=sd(max),
+            min=mean(min),
+            max=mean(max))
+
+
+
+
+## Summarise the daily max, min and mean for each burrow
+maxmin <- ATPU_LSSP %>%
+  group_by(Date, Burrow, Species) %>%
+  summarise(`Daily Mean` = mean(Inside),
+            `Daily Max.` = max(Inside), 
+            `Daily Min.` = min(Inside)) %>%
+  group_by(Species, Burrow)%>%
+  summarise(mean = mean(`Daily Mean`),
+            min = mean(`Daily Min.`),
+            max = mean(`Daily Max.`)) %>%
+  group_by(Species)%>%
+  summarise(mean=mean(mean),
+            sd.min=sd(min),
+            sd.max=sd(max),
+            min=mean(min),
+            max=mean(max))
 
 
 # Summarise the weather data
 weather %>% group_by(WeatherStation) %>%
-  summarise(sd = sd(Temperature))
+  summarise(sd = sd(Temperature),
+            mean=mean(Temperature),
+            min=min(Temperature),
+            max=max(Temperature))
+
+## Overall
+weather %>%
+  summarise(sd = sd(Temperature),
+            mean=mean(Temperature),
+            min=min(Temperature),
+            max=max(Temperature))
 
 
 # Summarise the buffering
