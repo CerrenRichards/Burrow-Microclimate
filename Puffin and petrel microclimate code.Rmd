@@ -530,6 +530,41 @@ extreme_cold_ATPU %>% group_by(Burrow)%>%
               summarise(min = min(mean),
                         max = max(mean))
 
+
+
+## Summarise the temperature variation during the extremes
+# LOGGERS
+mean(extreme_cold_ATPU$Outside, na.rm=T) # 9.4
+min(extreme_cold_ATPU$Outside, na.rm=T) # 6.3
+sd(extreme_cold_ATPU$Outside, na.rm=T) # 1.6
+
+# Weather station
+extreme_cold_ATPU %>% filter(Burrow == 42) %>%
+  summarise(mean = mean(Temperature), #9.1
+            min = min(Temperature), # 8.2
+            sd = sd(Temperature)) #0.7
+
+# LOGGERS
+mean(extreme_cold_LSSP$Outside, na.rm=T) # 6.5
+min(extreme_cold_LSSP$Outside, na.rm=T) # 4.5
+sd(extreme_cold_LSSP$Outside, na.rm=T) # 0.9
+
+# Station
+extreme_cold_LSSP %>% filter(Burrow == 21) %>%
+  summarise(mean = mean(Temperature), # 6
+            min = min(Temperature),# 5.3
+            sd = sd(Temperature)) #0.3
+
+## Hurricane
+ATPU_LSSP %>% filter(Species == "Leach's storm-petrel" & Date == "2021-09-11") %>%
+              summarise(mean = mean(Temperature), # 18.2
+                        min = min(Temperature),# 14.9
+                        sd = sd(Temperature), #1.3
+                        mean.out = mean(Outside), # 17.7
+                        min.out = min(Outside),#13.1
+                        sd.out = sd(Outside)) #1.7
+
+
 ```
 
 
@@ -1033,9 +1068,9 @@ ggplot(data = maxmin_season, aes(x = Time, y = Mean, group = Location))+
   scale_colour_manual(values = c("#80DEEA", "#43A407","#4E342E"))+
   scale_fill_manual(values = c("#80DEEA","#43A407", "#4E342E"))+
   theme(legend.position = c(0.9, 0.8))+
-  facet_wrap(~Species, scales = "free_x")+
-  theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"), 
-        strip.background = element_rect(fill="black"))
+  facet_wrap(~Species, scales = "free", ncol = 1)+
+   theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
 
 
 # Save plot
@@ -1108,6 +1143,99 @@ ggsave("Fig 5.pdf",
 
 
 ```
+
+
+## Season and hour composite plot
+
+```{r}
+# Gather the data 
+maxmin_season <- ATPU_LSSP %>% 
+                            select(Date, Time, 
+                                   Species, Outside, 
+                                   Inside, Temperature) %>%
+                            gather(Location, Temp, Outside:Temperature)
+
+# Give the weather station data a new name
+maxmin_season$Location[maxmin_season$Location == "Temperature"] <- "Station"
+
+# Summaries the mean, max, min and sd per hour across all burrows
+# Burrow 6 is missing
+maxmin_season <- maxmin_season %>% group_by(Time, Species, Location) %>%
+    summarise(Mean = mean(Temp, na.rm = T),
+            Max = max(Temp, na.rm = T), 
+            Min = min(Temp, na.rm = T),
+             sd = sd(Temp, na.rm = T))
+
+# specify the order of the colours
+maxmin_season$Location <- factor(maxmin_season$Location, levels=c("Outside", "Station", "Inside"))
+
+
+# Create the plot
+dayplot<- ggplot(data = maxmin_season, aes(x = Time, y = Mean, group = Location))+
+  geom_ribbon(aes(ymin=Mean-sd, ymax=Mean+sd, fill = Location), alpha = 0.35)+
+  geom_line(aes(colour = Location),  size = 1.25)+
+  xlab("Time of Day (h)") + ylab("Temperature (°C)")+
+  scale_x_continuous(breaks=seq(0,23,4))+
+  plottheme+
+  theme(legend.title = element_blank())+ 
+  scale_colour_manual(values = c("#80DEEA", "#43A407","#4E342E"))+
+  scale_fill_manual(values = c("#80DEEA","#43A407", "#4E342E"))+
+  theme(legend.position = "none")+
+  facet_wrap(~Species, scales = "free", ncol = 1)+
+   theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
+
+
+# Summarise the mean temperature and standard deviation for 
+# inside and outside the burrows, and for the weather station through the season
+season <- ATPU_LSSP %>%
+  group_by(Species, datetime) %>%
+  summarise(mean = mean(Inside), 
+            sd = sd(Inside),
+            meankest = mean(Temperature),
+            sdkest = sd(Temperature),
+            meanOut = mean(Outside, na.rm=TRUE), 
+            sdOut = sd(Outside, na.rm=TRUE))
+
+
+# If the datetime is not in the correct format, here is the code
+season$datetime <- as.POSIXct(season$datetime, format='%Y-%m-%d %H:%M')
+
+
+# Seasonal plot with the external temp logger
+tempall <- ggplot(data = season, aes(x = datetime, y = mean))+
+  geom_line(aes(x = datetime, y = meanOut), colour = "#80DEEA")+ # Line for external logger
+  geom_ribbon(aes(ymin=meanOut-sdOut, ymax=meanOut+sdOut), # external range
+              fill = "#80DEEA",alpha = 0.4)+
+  geom_line(colour = "#4E342E")+ # Line for internal logger
+  geom_ribbon(aes(ymin=mean-sd, ymax=mean+sd), # internal range
+              fill = "#4E342E",alpha = 0.4)+
+  geom_line(aes(x = datetime, y = meankest), 
+            colour = "#43A407")+ # Line for weather station
+  plottheme+
+  xlab("Date")+ theme(axis.title.y = element_blank())+
+  facet_wrap(~Species, scales = "free", ncol = 1)+
+   theme(strip.text.x = element_blank(), 
+          strip.background = element_blank())
+         
+  theme(legend.title = element_blank())+ 
+  theme(legend.position = c(0.9, 0.8))
+
+
+library(patchwork)
+
+# Layout the plots
+(dayplot |  tempall ) + plot_layout(widths=c(1,2))
+
+# save the plot
+ggsave("Composite_day_season.pdf", 
+       width = 300, height = 200, unit = "mm")
+
+
+
+
+```
+
 
 
 ## Visualising the 3D interaction between wind and temperature
