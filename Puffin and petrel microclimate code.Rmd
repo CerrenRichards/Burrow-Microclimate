@@ -680,7 +680,7 @@ ggsave("Fig 3.pdf",
 ATPU_LSSP <- read.csv("ATPU_LSSP.csv")
 
 
-mean <-  ATPU_LSSP %>%group_by(Species, Burrow) %>% 
+mean <-  ATPU_LSSP %>% group_by(Species, Burrow) %>% 
               summarise(mean = mean(Inside)) %>%
               arrange(desc(mean))
   
