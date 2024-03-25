@@ -696,7 +696,7 @@ TNZ <- left_join(ATPU_LSSP, mean)
   
 
 ## Subset for puffins
-ATPU.TNZ <- TNZ %>% filter(Species == "Atlantic puffin")
+ATPU.TNZ <- TNZ %>% filter(Species == "Atlantic puffin") 
 
 ## Subset for petrels
 LESP.TNZ <- TNZ %>% filter(Species == "Leach's storm-petrel")
@@ -704,53 +704,41 @@ LESP.TNZ <- TNZ %>% filter(Species == "Leach's storm-petrel")
 
 ## Puffin plot
 puffin.TNZ<-ggplot(data = ATPU.TNZ, aes(x = Burrow2, y = Inside))+
-    annotate("rect", xmin=-Inf, xmax=Inf, ymin=13.45, ymax=35, alpha=0.2)+
-   annotate("rect", xmin=-Inf, xmax=Inf, ymin=32, ymax=35, alpha=0.4)+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=13.45, ymax=32, alpha=0.2)+
   geom_violin()+
- stat_summary( fun.data = "mean_sdl",  fun.args = list(mult = 1), 
-    geom = "pointrange", color = "black", size = 0.1)+
+ stat_summary(fun="mean", geom="point", color = "black", size = 1)+ 
   xlab("Burrow") + ylab("Temperature (°C)")+
   plottheme+
   geom_hline(yintercept = 13.45, colour = "#414487FF", linetype = "dashed", size = 1.3)+ # mean
-  geom_hline(yintercept = 10.97, colour = "#414487FF", linetype = "dotted", size = 1, alpha = 0.8)+ # 95% CI
-  geom_hline(yintercept = 15.92, colour = "#414487FF", linetype = "dotted", size = 1, alpha = 0.8)+ # 95% CI
   geom_hline(yintercept = 32, colour = "#89B4C7", linetype = "dashed", size = 1.3)+ 
-  geom_hline(yintercept = 35, colour = "#FCA636FF", linetype = "dashed", size = 1.3)+
-  facet_wrap(~Species, scales = "free")+
-    theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
-        strip.text.y = element_text(size = 16, color = "white", face = "bold"),
-        strip.background = element_rect(fill="black"),
+    theme(
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
         axis.title.x = element_blank())
-
-
+  
+ 
 
 ## Petrel plot
 petrel.TNZ<-ggplot(data = LESP.TNZ, aes(x = Burrow2, y = Inside))+
-    annotate("rect", xmin=-Inf, xmax=Inf, ymin=24, ymax=Inf, alpha=0.2)+
-     annotate("rect", xmin=-Inf, xmax=Inf, ymin=32, ymax=Inf, alpha=0.4)+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=24, ymax=32, alpha=0.2)+
   geom_violin()+
- stat_summary( fun.data = "mean_sdl",  fun.args = list(mult = 1), 
-    geom = "pointrange", color = "black", size = 0.1)+
+ stat_summary(fun="mean", geom="point", color = "black", size = 1)+ 
   xlab("Burrow") + ylab("Temperature (°C)")+
   plottheme+
   geom_hline(yintercept = 24, colour = "#414487FF", linetype = "dashed", size = 1.3)+
   geom_hline(yintercept = 32, colour = "#89B4C7", linetype = "dashed", size = 1.3)+
-  facet_wrap(~Species)+
-    theme(strip.text.x = element_text(size = 16, color = "white", face = "bold"),
-        strip.text.y = element_text(size = 16, color = "white", face = "bold"),
-        strip.background = element_rect(fill="black"),
+    theme(
         axis.text.x = element_blank(),
-        axis.ticks.x = element_blank())+
-  scale_y_continuous(limits = c(9.5, 36))
+        axis.ticks.x = element_blank())
 
 
 library(patchwork)
 
 puffin.TNZ/petrel.TNZ
 
-
+# Save plot
+ggsave("Fig TNZ.pdf", 
+       width = 200, height = 170, unit = "mm")
 
 
 ```
