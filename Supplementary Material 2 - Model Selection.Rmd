@@ -453,14 +453,9 @@ plot(gamm1_puffin$gam, scheme = 2, pages = 1)
 
 # PETREL MODELS - Favourable burrow features during extreme temperatures 
 
-Filter the data in the 1st and 99th percentiles of external air temperatures recorded at the weather stations. These temperatures were identified as 25.7°C and 6.5°C.
+Filter the data in the 99th percentile of external air temperatures recorded at the weather stations. This temperature were identified as 6.5°C.
 
 ```{r}
-
-## HOT
-extreme_heat_LSSP <- filter(lssp, Temperature >= 25.7 & Species == "Leach's storm-petrel")
-extreme_heat_LSSP$Extreme <- "Heat Extreme"
-
 
 ## COLD
 extreme_cold_LSSP <- filter(lssp, Temperature <= 6.5 & Species == "Leach's storm-petrel")
@@ -469,124 +464,10 @@ extreme_cold_LSSP$Extreme <- "Cold Extreme"
 ```
 
 
-## Model S2.13 - `GAM` model - Heat extreme
+## Model S2.13 - `GAM` model - Cold extreme
 
 ```{r}
 # MODEL S2.13
-gam_heat_lssp<- gam(data = extreme_heat_LSSP,
-           buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
-                  s(scale(Entrance_Area),bs="ts") +  # Weather
-                  s(scale(volume),bs="ts") +  # Weather
-                  s(Burrow, bs="re"), # random effect
-                  method = "REML") 
-
-```
-
-
-**Model Summary**
-```{r, echo=FALSE}
-
-summary(gam_heat_lssp)
-
-```
-
-
-## Explore model fit
-
-**Test for temporal autocorrelation**
-
-```{r, out.width = '60%', fig.align = "center"}
-acf(residuals(gam_heat_lssp))
-```
-
-
-**Gam.check**
-
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-gam.check(gam_heat_lssp)
-```
-
-
-**Plotting**
-
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-plot(gam_heat_lssp, pages = 1)
-```
-
-
-## Model S2.14 - `GAMM` with corAR1 - Heat extreme
-
-```{r}
-
-# MODEL S2.14
-gamm_heat_lssp <- gamm(data = extreme_heat_LSSP,
-                   buffer_kestrel~ s(scale(Canopy), bs="ts") +
-                   s(scale(Entrance_Area),bs="ts") +  # 
-                   s(scale(volume),bs="ts"),  # Weather
-                   random = list(Burrow = ~1),# Burrow features
-                   corr = corAR1(form = ~ 1|Burrow),
-                   method = "REML")
-
-```
-
-
-**Model Summary - gam**
-```{r, echo=FALSE}
-
-summary(gamm_heat_lssp$gam)
-
-```
-
-**Model Summary - lme**
-```{r, echo=FALSE}
-
-summary(gamm_heat_lssp$lme)
-
-```
-
-## Explore model fit
-
-**Test for temporal autocorrelation**
-
-The residual function for gam in R returns the residuals without adjustment for the correlation structure. So must specify type = "normalized"
-
-```{r, out.width = '60%', fig.align = "center"}
-acf(residuals(gamm_heat_lssp$lme, type = "normalized"))
-```
-
-
-**Gam.check**
-
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-
-gam.check(gamm_heat_lssp$gam)
-
-```
-
-
-**lme plot**
-
-``````{r, out.width = '60%', fig.align = "center"}
-
-plot(gamm_heat_lssp$lme)
-
-```
-
-
-**Plot**
-
-``````{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-
-plot(gamm_heat_lssp$gam, pages = 1)
-
-```
-
-
-
-## Model S2.15 - `GAM` model - Cold extreme
-
-```{r}
-# MODEL S2.15
 gam_cold_lssp<- gam(data = extreme_cold_LSSP,
            buffer_kestrel~s(scale(Canopy), bs="ts") + # Weather 
                   s(scale(Entrance_Area),bs="ts") +  # Weather
@@ -628,10 +509,10 @@ plot(gam_cold_lssp, pages = 1)
 ```
 
 
-## Model S2.16 - `GAMM` with corAR1 - cold extreme
+## Model S2.14 - `GAMM` with corAR1 - cold extreme
 
 ```{r}
-# MODEL S2.16
+# MODEL S2.14
 gamm_cold_lssp <- gamm(data = extreme_cold_LSSP,
                    buffer_kestrel~ s(scale(Canopy), bs="ts") +
                    s(scale(Entrance_Area),bs="ts") +  # 
@@ -698,10 +579,9 @@ plot(gamm_cold_lssp$gam, pages = 1)
 
 
 
-
 # PUFFIN MODELS - Favourable burrow features during extreme temperatures 
 
-Filter the data in the 1st and 99th percentiles of external air temperatures recorded at the weather stations. These temperatures were identified as 25.6°C and 10°C.
+Filter the data in the 99th percentile of external air temperatures recorded at the weather stations. The temperature was identified as 10°C.
 
 ```{r}
 
@@ -709,128 +589,15 @@ Filter the data in the 1st and 99th percentiles of external air temperatures rec
 extreme_cold_ATPU <- filter(atpu.wind, Temperature <= 10 & Species == "Atlantic puffin")
 extreme_cold_ATPU$Extreme <- "Cold Extreme"
 
-## HOT
-extreme_heat_ATPU <- filter(atpu.wind, Temperature >= 25.6 & Species == "Atlantic puffin")
-extreme_heat_ATPU$Extreme <- "Heat Extreme"
 
 ```
 
 
-## Model S2.17 - `GAM` model - Heat extreme
+
+## Model S2.15 - `GAM` model - Cold extreme
 
 ```{r}
-# MODEL S2.17
-gam_heat_ATPU<- gam(data = extreme_heat_ATPU,
-           buffer_kestrel~s(scale(Entrance_Area),bs="ts") +  # Weather
-                  s(scale(volume),bs="ts") +  # Weather
-                  s(Burrow, bs="re"), # random effect
-                  method = "REML") 
-
-```
-
-
-**Model Summary**
-```{r, echo=FALSE}
-
-summary(gam_heat_ATPU)
-
-```
-
-
-## Explore model fit
-
-**Test for temporal autocorrelation**
-
-```{r, out.width = '60%', fig.align = "center"}
-acf(residuals(gam_heat_ATPU))
-```
-
-
-**Gam.check**
-
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-gam.check(gam_heat_ATPU)
-```
-
-
-**Plotting**
-
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-plot(gam_heat_ATPU, pages = 1)
-```
-
-
-## Model S2.18 - `GAMM` with corAR1 - Heat extreme
-
-```{r}
-# MODEL S2.18
-gamm_heat_ATPU <- gamm(data = extreme_heat_ATPU,
-                   buffer_kestrel~ s(scale(Entrance_Area),bs="ts") +  # 
-                   s(scale(volume),bs="ts"),  # Weather
-                   random = list(Burrow = ~1),# Burrow features
-                   corr = corAR1(form = ~ 1|Burrow),
-                   method = "REML")
-
-```
-
-
-**Model Summary - gam**
-```{r, echo=FALSE}
-
-summary(gamm_heat_ATPU$gam)
-
-```
-
-**Model Summary - lme**
-```{r, echo=FALSE}
-
-summary(gamm_heat_ATPU$lme)
-
-```
-
-## Explore model fit
-
-**Test for temporal autocorrelation**
-
-The residual function for gam in R returns the residuals without adjustment for the correlation structure. So must specify type = "normalized"
-
-```{r, out.width = '60%', fig.align = "center"}
-acf(residuals(gamm_heat_ATPU$lme, type = "normalized"))
-```
-
-
-**Gam.check**
-
-```{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-
-gam.check(gamm_heat_ATPU$gam)
-
-```
-
-
-**lme plot**
-
-``````{r, out.width = '60%', fig.align = "center"}
-
-plot(gamm_heat_ATPU$lme)
-
-```
-
-
-**Plot**
-
-``````{r, fig.height = 15, fig.width = 15, fig.align = "center"}
-
-plot(gamm_heat_ATPU$gam, pages = 1)
-
-```
-
-
-
-## Model S2.19 - `GAM` model - Cold extreme
-
-```{r}
-## MODEL S2.19
+## MODEL S2.15
 gam_cold_ATPU<- gam(data = extreme_cold_ATPU,
            buffer_kestrel~s(scale(Entrance_Area),bs="ts") +  # Weather
                   s(scale(volume),bs="ts") +  # Weather
@@ -871,10 +638,10 @@ plot(gam_cold_ATPU, pages = 1)
 ```
 
 
-## Model S2.20 - `GAMM` with corAR1 - cold extreme
+## Model S2.16 - `GAMM` with corAR1 - cold extreme
 
 ```{r}
-# Model S2.20
+# Model S2.16
 gamm_cold_ATPU <- gamm(data = extreme_cold_ATPU,
                    buffer_kestrel~ s(scale(Entrance_Area),bs="ts") +  # 
                    s(scale(volume),bs="ts"),  # Weather
